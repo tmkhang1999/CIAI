@@ -2,10 +2,10 @@
 """Hero figure for the project page and README: a five-column cut of ciai-qualitative.jpg.
 
 The full grid (held-out MID scene everett_lobby3, three flash directions, seven methods)
-is too dense to read at the top of a page. This keeps Input, GT albedo, Ours and the two
-baselines whose albedo changes most with the light on this scene, ranked by the
-per-scene C_mat in documents/results/mid_per_scene.json. The rule is applied here in
-code, so the choice is not made by eye.
+is too dense to read at the top of a page. This keeps Input, GT albedo, Ours and three
+fixed baselines (BASELINES below): one CNN model, one diffusion model and the recent
+RGB->X. Their per-scene C_mat from documents/results/mid_per_scene.json is printed so the
+caption can be checked against it.
 
 The model weights are not available any more, so the panels are cut from the saved grid
 rather than re-rendered. Panel geometry was measured on the 1900 px grid.
@@ -35,7 +35,8 @@ ROWS = ['light 0', 'light 9', 'light 18']
 # Measured on the 1900x472 grid: first panel at x=108, pitch 199.2, panels 197x132.
 X0, PITCH, PW = 108, 199.2, 197
 ROW_Y, PH = (58, 192, 326), 132
-SCALE, GAP, N_BASE = 2, 8, 2
+SCALE, GAP = 2, 8
+BASELINES = ['CRefNet', 'Marigold-Light', 'RGB-X']
 
 
 def font(size: int, bold: bool = False):
@@ -53,18 +54,15 @@ def font(size: int, bold: bool = False):
         return ImageFont.load_default()
 
 
-def pick_baselines() -> list[str]:
-    """Baselines with the largest per-scene C_mat (luminance change across lights)."""
+def report_scores() -> None:
+    """Print per-scene C_mat (luminance change across lights) of the shown methods."""
     d = json.load(open(PER_SCENE))
     i = d['scenes'].index(SCENE)
-    scores = {m: v['C_mat'][i] for m, v in d['methods'].items()
-              if not m.startswith('Ours') and m in COLUMNS}
-    if len(scores) < N_BASE:
-        raise ValueError(f'only {len(scores)} baselines matched the grid columns')
-    ranked = sorted(scores, key=scores.get, reverse=True)
-    print('C_mat on', SCENE, {m: round(scores[m], 3) for m in ranked},
+    missing = [m for m in BASELINES if m not in d['methods'] or m not in COLUMNS]
+    if missing:
+        raise ValueError(f'baselines not found in per-scene results or grid: {missing}')
+    print('C_mat on', SCENE, {m: round(d['methods'][m]['C_mat'][i], 3) for m in BASELINES},
           '| ours', round(d['methods'][OURS_KEY]['C_mat'][i], 3))
-    return ranked[:N_BASE]
 
 
 def main():
@@ -74,7 +72,8 @@ def main():
     if grid.size != (1900, 472):
         raise ValueError(f'unexpected grid size {grid.size}; re-measure the panel geometry')
 
-    cols = ['Input', 'GT albedo', 'Ours'] + pick_baselines()
+    report_scores()
+    cols = ['Input', 'GT albedo', 'Ours'] + BASELINES
     pw, ph = PW * SCALE, PH * SCALE
     head, lab_w = 64, 150
     canvas = Image.new('RGB', (lab_w + len(cols) * (pw + GAP) - GAP,

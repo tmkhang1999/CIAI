@@ -11,11 +11,11 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg)](https://www.python.org)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.3+-EE4C2C.svg)](https://pytorch.org)
 
-<img src="documents/thesis/images/readme/ciai-hero.jpg" width="100%" alt="One held-out scene under three flash directions. Columns: input, ground-truth albedo, our albedo, Marigold-Light and Marigold-App."/>
+<img src="documents/thesis/images/readme/ciai-hero.jpg" width="100%" alt="One held-out scene under three flash directions. Columns: input, ground-truth albedo, our albedo, CRefNet, Marigold-Light and RGB-X."/>
 
 </div>
 
-**Figure 1.** One held-out scene under three flash directions. The surfaces do not change, so the albedo should not either. The two baselines that change most on this scene shift with the light; ours changes less, though it is paler than the ground truth. All seven methods are compared in Figure 5.
+**Figure 1.** One held-out scene under three flash directions. The surfaces do not change, so the albedo should not either. CRefNet and Marigold-Light shift in brightness as the light changes, and RGB-X, whose brightness is about as steady as ours on this scene, turns the blue jacket grey at light 18. Ours changes less, though it is paler than the ground truth. All seven methods are compared in Figure 5.
 
 ## Overview
 

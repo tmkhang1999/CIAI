@@ -935,11 +935,12 @@
     <!-- ── Teaser ──────────────────────────────────── -->
     <div class="teaser-wrap">
       <img src="static/img/ciai-hero.jpg" class="teaser-img"
-           alt="One held-out scene of clothes under three flash directions. Columns: input, ground-truth albedo, our albedo, Marigold-Light and Marigold-App. The two baselines change between rows; ours changes less.">
+           alt="One held-out scene of clothes under three flash directions. Columns: input, ground-truth albedo, our albedo, CRefNet, Marigold-Light and RGB-X. The baselines change between rows or lose colour; ours changes less.">
       <p class="teaser-caption">
         One held-out scene under three flash directions. The surfaces do not change, so the albedo should not
-        either. The two baselines that change most on this scene shift with the light; ours changes less,
-        though it is paler than the ground truth. All seven methods are compared in Figure 7.
+        either. CRefNet and Marigold-Light shift in brightness as the light changes, and RGB-X, whose brightness is
+        about as steady as ours on this scene, turns the blue jacket grey at light 18. Ours changes less, though it
+        is paler than the ground truth. All seven methods are compared in Figure 7.
       </p>
     </div>
 
