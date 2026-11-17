@@ -4,7 +4,7 @@ MOTIVATION
 ----------
 MID -- the corpus supplying CIAI's real training pairs AND the corpus on which
 Cast_rel / Chroma_fid are reported -- barely varies illuminant colour. Measured from
-its gray probes over 30 test scenes / 9000 illuminant pairs (2026-09-05):
+its gray probes over 30 test scenes / 9000 illuminant pairs, all 25 flash directions:
 
     median pairwise chromaticity gap   0.030
     fraction of pairs >= 0.08          14%          (0.08 = the trifactor model's minimum

@@ -4,10 +4,11 @@
 \chapter{Method}
 \label{ch:method}
 
-This chapter describes how our model works.
-We start with the physical model that underlies IID (\secref{sec:physics}),
-then describe the network architecture (\secref{sec:architecture}),
-and finally explain the CIAI training strategy (\secref{sec:ciai}).
+The purpose of this chapter is to answer two questions: which model predicts the albedo
+and the shading, and how CIAI trains it. We start with the physical model that underlies IID
+(\secref{sec:physics}), because it fixes what the network must output. We then describe the
+network architecture (\secref{sec:architecture}), and finally the CIAI training strategy
+(\secref{sec:ciai}), which is the core of this thesis.
 
 
 \section{Physical Model}
@@ -15,7 +16,7 @@ and finally explain the CIAI training strategy (\secref{sec:ciai}).
 
 \subsection{The Standard IID Equation}
 
-Under the Lambertian reflectance model with a single distant light source,
+Under the Lambertian reflectance model and a white (achromatic) illuminant,
 the intensity at a pixel $p$ in an image is:
 \begin{equation}
   \mathbf{I}(p) = \mathbf{A}(p) \cdot S(p)
@@ -56,11 +57,11 @@ change brightness but cannot remove the lamp's hue.
     Why scalar shading must leak illuminant colour into albedo. From left: a
     warm-lit MID frame; pseudo-ground-truth albedo; the RGB shading implied by
     the data; and the albedo recovered with the luminance of that true shading.
-    The favourable scalar construction still produces a
-    visibly tinted albedo (mean chroma error $2.31$, versus $0.22$ when shading
-    has three channels), because a scalar can alter brightness but not hue. The
-    remaining RGB error comes from clipping and the display-domain conversion,
-    not from an inability to represent channel-dependent illumination.
+    Even with the luminance of the true shading, the scalar construction gives a visibly
+    tinted albedo, because a scalar can change brightness but not hue. Its mean chroma
+    error, the per-pixel distance to the pseudo-ground truth in $(R/G, B/G)$, is $2.31$,
+    against $0.22$ when the shading has three channels; that small remainder comes from
+    clipped pixels.
   }
   \label{fig:formulation}
 \end{figure}
@@ -75,7 +76,7 @@ clipped pixels), giving the full decomposition:
   \mathbf{I}(p) = \mathbf{A}(p) \odot \mathbf{S}_d(p) + \mathbf{R}(p)
   \label{eq:iid_color}
 \end{equation}
-where $\odot$ is element-wise multiplication, $\mathbf{S}_d$ is the colored
+where $\odot$ is element-wise multiplication, $\mathbf{S}_d$ is the coloured
 \emph{diffuse} shading, and $\mathbf{R} \geq 0$ is the non-diffuse residual.
 The model predicts $\mathbf{A}$ and $\mathbf{S}_d$ with two network heads and derives
 the residual \emph{analytically} as
@@ -163,12 +164,10 @@ final block).
 These multi-depth features capture information at different levels of abstraction:
 earlier blocks retain more local texture and colour, while later blocks encode
 semantic and structural information.
-One consequence of DINOv2's heavily augmented self-supervised training is
-directly useful for IID: because its objective is invariant to strong
-photometric augmentation, its patch tokens are expected to be robust to
-low-level appearance changes including illumination, so a shadowed and a lit
-patch of the same material tend to map to similar tokens, which is a helpful prior for
-assigning the same albedo across a shadow boundary.
+DINOv2 is trained to be invariant to strong photometric augmentation, so we expect its
+patch tokens to change little with illumination: a shadowed and a lit patch of the same
+material should map to similar tokens, which would help the model assign them the same
+albedo. We did not test this property directly.
 
 \subsection{DPT Decoder}
 
@@ -224,7 +223,7 @@ three-channel inverse shading:
   \in (0, 1)^{H \times W \times 3}
   \label{eq:shading_head}
 \end{equation}
-The colored diffuse shading $\mathbf{S}_d$ is recovered from $\boldsymbol{\pi}$
+The coloured diffuse shading $\mathbf{S}_d$ is recovered from $\boldsymbol{\pi}$
 using \eqnref{eq:uninvert}, and the non-diffuse residual follows analytically:
 \begin{equation}
   \mathbf{R} = \bigl(\mathbf{I} - \mathbf{A} \odot \mathbf{S}_d\bigr)_{+}
@@ -241,7 +240,7 @@ are both derived from the same underlying scene representation.
 \input{./chapters/fig_architecture}
 
 
-\section{Cross-Illumination Albedo Invariance (CIAI)}
+\section[Cross-Illumination Albedo Invariance (CIAI)]{Cross-Illumination Albedo\newline Invariance (CIAI)}
 \label{sec:ciai}
 
 \subsection{The Core Idea}
@@ -260,7 +259,44 @@ Let $\mathbf{A}_1 = \mathbf{A}(\mathbf{I}_1)$ and $\mathbf{A}_2 = \mathbf{A}(\ma
 be the albedos predicted by the model for each image, and let $S_1$ and $S_2$ be
 the corresponding shadings.
 \figref{fig:ciai} at the end of this section shows the complete mechanism, once
-both losses below have been defined.
+both losses below have been defined. \tabref{tab:ciai_glance} summarises each part of CIAI
+as a goal, the idea behind it, and how it is implemented; the subsections below follow the
+same order.
+
+\begin{table}[t!]
+  \caption[CIAI at a glance.]{%
+    Each part of CIAI as a goal, the idea behind it, and its implementation.}
+  \label{tab:ciai_glance}
+  \centering
+  \small
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.16\textwidth}>{\raggedright\arraybackslash}p{0.22\textwidth}>{\raggedright\arraybackslash}p{0.27\textwidth}>{\raggedright\arraybackslash}p{0.25\textwidth}@{}}
+    \toprule
+    Part & Goal & Idea & Implementation \\
+    \midrule
+    Invariance loss
+      & The albedo must not change with the light.
+      & The two frames show the same materials, so their albedos must agree.
+      & Masked $\ell_1$ between $\mathbf{A}_1$ and $\mathbf{A}_2$ (\eqnref{eq:linv}). \\
+    Explanation loss
+      & Block the flat-albedo shortcut.
+      & Where the albedo is shared, the image ratio equals the shading ratio.
+      & Log luminance ratio of the shadings matches that of the images (\eqnref{eq:lexpl}). \\
+    Validity mask
+      & Train only on trustworthy pixels.
+      & Clipped, specular and near-black pixels break the ratio.
+      & Pixels between the 15th and 97th luminance percentile in both frames
+        (\figref{fig:pair_mask}). \\
+    Raw second frame
+      & Keep the real colour change of the pair.
+      & White balance would remove the illuminant colour.
+      & First frame white-balanced and supervised, second frame raw (\figref{fig:wb_lanes}). \\
+    Two-stage schedule
+      & Anchor the albedo before asking for invariance.
+      & On an unanchored model, invariance can be met by collapsing to grey.
+      & Synthetic supervision to 19k iterations, then pairs added (\secref{sec:schedule}). \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \subsection{Invariance Loss}
 
@@ -277,12 +313,29 @@ where $\Omega_v \subset \Omega$ is the set of \emph{valid paired pixels}.
 The validity mask matters in practice: MID frames are high-dynamic-range captures
 that are clipped per frame, so a pixel can be saturated in one frame and not the
 other, and deep shadows carry mostly sensor noise.
-$\Omega_v$ excludes clipped and near-black pixels in either frame (roughly 75\%
-of pixels survive the mask on average), so the invariance constraint is only
-applied where both observations are trustworthy.
+$\Omega_v$ keeps the pixels whose luminance lies between the 15th and 97th percentile in
+both frames, with an absolute floor for near-black pixels, and drops the clipped pixels and
+the brightest $3\%$ of the first frame that the supervised losses also ignore (roughly
+$75\%$ of pixels survive, \figref{fig:pair_mask}). The invariance constraint is therefore
+only applied where both observations are trustworthy.
 This loss is zero only when the model predicts identical albedo for both images.
 Minimising it pushes the albedo to be independent of whatever differs between the two
 illuminations; it says nothing about a component the two frames share.
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=\textwidth]{images/report/pair_mask.jpg}
+  \caption[One CIAI training pair and its validity mask.]{%
+    One CIAI training pair from MID, shown with a shared exposure. The third panel is the
+    log luminance ratio of the two photographs, which $\mathcal{L}_{\text{expl}}$
+    (\secref{sec:ciai}) asks the ratio of the two predicted shadings to match: blue where the
+    second flash lights the surface more. The fourth panel is the validity mask $\Omega_v$,
+    which keeps pixels between the 15th and 97th luminance percentile in both frames; here
+    $75\%$ of the pixels survive. The specular highlights and the darkest shadows are
+    removed, because their ratio says nothing about the diffuse shading.
+  }
+  \label{fig:pair_mask}
+\end{figure}
 
 \subsection{Explanation Loss}
 
@@ -321,11 +374,8 @@ Using luminance makes this term supervise the achromatic \emph{intensity} change
 between the frames, and only that. A purely chromatic change between the two frames
 leaves both log-ratios in \eqnref{eq:lexpl} unchanged and contributes no gradient. Together
 with $\mathcal{L}_{\text{inv}}$, which a colour shared by both albedos satisfies, nothing in
-CIAI states where a change in illuminant \emph{colour} must go. On the trained model we
-measure that the shading explains only $47.9\%$ of the chroma change between paired
-frames, and that the unpenalised chroma residual ($0.074$) is as large as the penalised
-luminance residual ($0.076$). This is why CIAI is expected to help luminance more than
-colour (\secref{sec:colour_axis}).
+CIAI states where a change in illuminant \emph{colour} must go. This is why CIAI is
+expected to help luminance more than colour (\secref{sec:colour_axis}).
 This loss is zero only when the shading ratio matches the image ratio at every
 valid pixel, which means the shading is absorbing the lighting difference rather
 than the albedo.
@@ -339,29 +389,46 @@ neutral, while the green channel, and with it the overall intensity, is left unc
 After this step the two frames of a pair differ in brightness and shadows exactly as
 before, but their illuminant colours have been equalised.
 
-For the cross-illumination pair we skip this step (the \texttt{mid\_raw\_color\_pair}
-flag). The supervised MID frame stays white-balanced, because the pseudo-ground-truth
-albedo was derived from the white-balanced stack, while the paired frames keep whatever
-illuminant colour difference they have, so that $\mathcal{L}_{\text{inv}}$ is asked to be
-invariant to it. \figref{fig:wb_lanes} shows the two pre-processing lanes.
+For the second frame of the cross-illumination pair we skip this step (the
+\texttt{mid\_raw\_color\_pair} flag). The first frame stays white-balanced, because it also
+carries the supervised albedo loss and the pseudo-ground-truth albedo was derived from the
+white-balanced stack. The second frame is left raw. The two frames of a pair therefore
+differ in direction and intensity of the light, and also by the illuminant colour of the raw
+frame relative to the neutral first frame, so $\mathcal{L}_{\text{inv}}$ is asked to be
+invariant to that colour as well. \figref{fig:wb_lanes} shows one such pair.
 
 The size of what is kept should not be overstated. MID's flash is white, and the colour
-difference between two raw frames comes only from light bounced off coloured surfaces:
-measured on the grey probes, the median chromaticity gap between two frames of a scene is
-$0.030$ (\secref{sec:colour_axis}). Keeping the pairs raw is therefore a choice that
+of a raw frame differs from neutral only through light bounced off coloured surfaces:
+measured on the grey probes over the training pairs, the median chromaticity gap between the
+two frames of a pair is $0.030$ (\secref{sec:colour_axis}). Keeping the pairs raw is therefore a choice that
 preserves a small real colour signal, not a source of strong coloured-illuminant
 supervision, and our ablations do not isolate its effect from the other components.
 
 \begin{figure}[t!]
   \centering
-  \includegraphics[width=\textwidth]{images/wb/wb_lanes.png}
-  \caption[Two supervision lanes: a white-balanced anchor and a raw CIAI pair.]{%
-    The two supervision lanes are built from different pre-processing of the same
-    kind of scene, not different data. The absolute anchor (left) is
-    white-balanced and supervised against the pseudo-ground-truth albedo, which pins
-    $\mathbf{A}$ to a reference colour rather than an arbitrary one. The CIAI pair
-    (right) is left raw, so each observation keeps its own illuminant, including the
-    small colour difference that bounced light introduces between flash directions.
+  \begin{tikzpicture}[
+      img/.style={inner sep=0pt, anchor=center},
+      lab/.style={font=\footnotesize, align=center, text width=0.3\textwidth},
+      loss/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt},
+      arr/.style={-latex, thick, black!70}]
+    \node[img] (anc) at (0,0)    {\includegraphics[width=0.29\textwidth]{images/wb/pair_anchor.jpg}};
+    \node[img] (fa)  at (4.95,0) {\includegraphics[width=0.29\textwidth]{images/wb/pair_frame_a_wb.jpg}};
+    \node[img] (fb)  at (9.9,0)  {\includegraphics[width=0.29\textwidth]{images/wb/pair_frame_b_raw.jpg}};
+    \node[lab, below=2pt of anc] {pseudo-ground-truth albedo\\(shared by all frames)};
+    \node[lab, below=2pt of fa]  {frame $a$, \textbf{white-balanced}\\on its grey probe};
+    \node[lab, below=2pt of fb]  {frame $b$, \textbf{raw}\\(keeps its illuminant colour)};
+    \draw[arr, blue!70!black] ([yshift=4mm]fa.north) -- ++(0,0.5) -| node[loss, pos=0.25, text=blue!70!black]
+      {supervised albedo loss} ([yshift=4mm]anc.north);
+    \draw[arr, orange!80!black, latex-latex] ([yshift=4mm]fa.north east) -- ++(0,0.5) -| node[loss, pos=0.25, text=orange!80!black]
+      {$\mathcal{L}_{\text{inv}}$, $\mathcal{L}_{\text{expl}}$} ([yshift=4mm]fb.north);
+  \end{tikzpicture}
+  \caption[How one CIAI training pair is pre-processed.]{%
+    How one MID training pair is pre-processed (test scene, shown with one shared exposure).
+    Frame $a$ is white-balanced, because it also carries the supervised loss against the
+    white-balanced pseudo-ground-truth albedo. Frame $b$, a different flash direction, is left
+    raw. The CIAI losses compare the two, so the albedo must ignore the change in light
+    direction and intensity and also the colour of the raw frame. This example shows a large
+    colour difference ($0.157$) to make it visible; the median over training pairs is $0.030$.
   }
   \label{fig:wb_lanes}
 \end{figure}

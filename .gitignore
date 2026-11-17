@@ -109,3 +109,10 @@ documents/history/
 
 # macOS
 .DS_Store
+
+# Datasets (MID with MIDIntrinsics albedo, about 1.7 GB): downloaded separately, never committed.
+data/
+candidates_*.jpg
+
+# Private research planning notes (literature, experiment design)
+documents/planning/

@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cross-Illumination Albedo Invariance</title>
+  <title>Luminance Constancy in Intrinsic Image Decomposition via Cross-Illumination Albedo Invariance (CIAI)</title>
   <meta name="description" content="Cross-Illumination Albedo Invariance (CIAI) trains an intrinsic image decomposition model on real photographs of one scene under different illumination, so the recovered albedo keeps its luminance when the light changes. Minh Khang Tran, 2026.">
   <meta name="author" content="Minh Khang Tran">
-  <meta property="og:title" content="Cross-Illumination Albedo Invariance">
-  <meta property="og:description" content="Luminance-stable intrinsic decomposition from real multi-illumination photographs.">
+  <meta property="og:title" content="Luminance Constancy in Intrinsic Image Decomposition via Cross-Illumination Albedo Invariance (CIAI)">
+  <meta property="og:description" content="Training on real photographs of one scene under different lighting so the recovered albedo keeps its luminance when the light changes.">
   <meta property="og:image" content="https://tmkhang1999.github.io/CIAI/static/img/ciai-teaser.jpg">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232c5c7a'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23dbeafb'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -891,8 +891,8 @@
     <div class="hero-venue">Research project &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; started as an MSc thesis (COSI / NTNU)</div>
 
     <h1 class="paper-title">
-      Cross-Illumination Albedo Invariance
-      <span class="paper-subtitle">Luminance-stable intrinsic decomposition from real multi-illumination photographs</span>
+      Luminance Constancy in Intrinsic Image Decomposition
+      <span class="paper-subtitle">via Cross-Illumination Albedo Invariance (CIAI)</span>
     </h1>
 
     <div class="paper-authors">
@@ -949,7 +949,7 @@
       <a href="#method">Method</a>
       <a href="#results">Results</a>
       <a href="#colour">Limitations</a>
-      <a href="#next">Next</a>
+      <a href="#next">Future work</a>
       <a href="#bibtex">BibTeX</a>
     </nav>
 
@@ -960,24 +960,37 @@
       <ul class="contrib-list">
         <li><strong>The problem.</strong> One photograph cannot tell a dark surface from a dimly lit one, so part
           of the light leaks into the recovered albedo.</li>
+        <li><strong>The goal.</strong> From one image, an albedo whose luminance stays the same when only the light
+          changes, without losing the colour of the material.</li>
+        <li><strong>Why it is hard.</strong> Real photographs have no albedo ground truth, and stability alone has a
+          trivial answer: a flat grey albedo never changes, but it is wrong (Figure 1). The only real dataset with
+          many lights per scene and a dense albedo reference, MID, also uses a white flash, so its light colour
+          barely changes.</li>
         <li><strong>The idea.</strong> Two photographs of one scene under different light go through the same
-          network, and their albedos must agree. The pairs are used only in training, so inference is still one
-          image and one pass.</li>
+          network. Their albedos must agree, and their shadings must explain the change in brightness. The pairs
+          are used only in training, so inference is still one image and one pass.</li>
         <li><strong>The result.</strong> In a matched ablation, CIAI lowers the luminance variation of a material
           across lighting by 28&ndash;39%, and the albedo error on raw ARAP renderings by 7&ndash;14%, with 18.5M
           trainable parameters.</li>
-        <li><strong>The limit.</strong> Colour improves much less, because the explanation loss uses luminance
-          only. The next stage gives the shading colour its own output.</li>
+        <li><strong>The limit.</strong> Hue drift improves only by 4&ndash;6%, because the explanation loss uses
+          luminance only.</li>
       </ul>
-
+      <div class="ciai-figure">
+        <img src="static/img/ciai-stable-vs-correct.jpg"
+             alt="Schematic: three materials predicted from two frames. (a) The brightness pattern of the light stays in the albedo, so the frames differ. (b) A flat grey albedo is identical in both frames but has lost all colour. (c) The goal is identical in both frames and keeps the colours.">
+        <p class="fig-caption">
+          <strong>Figure 1. Stable is not the same as correct.</strong> A flat grey albedo (b) is perfectly stable.
+          This is why CIAI has a second loss, and why every stability score on this page sits next to an accuracy
+          score.
+        </p>
+      </div>
       <div class="contrib-heading">Contributions</div>
       <ol class="contrib-numbered">
         <li><strong>A paired training strategy</strong> on real MID photographs with pseudo-ground-truth albedo,
           added as a second training stage.</li>
         <li><strong>A matched ablation</strong> that isolates the effect of CIAI on luminance stability and on
           albedo accuracy.</li>
-        <li><strong>An evaluation that pairs stability with accuracy</strong>, because a grey, constant albedo is
-          perfectly stable.</li>
+        <li><strong>An evaluation that pairs stability with accuracy</strong> for every score.</li>
       </ol>
     </section>
 
@@ -987,26 +1000,26 @@
     <section class="ciai-section" id="method">
       <div class="sec-eyebrow">Method</div>
       <h2 class="ciai-section-title">Cross-Illumination Albedo Invariance</h2>
+
       <p class="ciai-text">
         Write a photograph as <strong>I = A &#8857; S<sub>d</sub> + R</strong>: albedo times shading, plus a residual for
         highlights. From one image, a grey wall in shadow and a dark wall in full light are the same pixels, so
-        whatever the model cannot attribute to the light ends up in the albedo. Here, "material colour" means the
-        diffuse linear-RGB albedo, not the spectral reflectance.
+        whatever the model cannot attribute to the light ends up in the albedo. Existing models show both failure
+        modes of Figure 1.
       </p>
 
       <div class="ciai-figure">
         <img src="static/img/ciai-baselines.jpg"
              alt="One MID scene under two lighting conditions, with the albedo predicted by CRefNet and by Marigold-Appearance for each. CRefNet's albedo is pale; Marigold's changes between the two lights.">
         <p class="fig-caption">
-          <strong>Figure 1. Existing models under two lights.</strong> CRefNet stays similar across the two lights
+          <strong>Figure 2. Existing models under two lights.</strong> CRefNet stays similar across the two lights
           partly because its albedo is pale, and Marigold-App keeps more colour but shifts with the light.
         </p>
       </div>
 
       <p class="ciai-text">
         A <strong>second photograph of the same scene under different light</strong> breaks the tie: the surfaces
-        are the same in both, so anything that changed is lighting. This follows Siamese learning and multi-view
-        consistency in 3D reconstruction, with positive pairs only. We use the Multi-Illumination Dataset (MID),
+        are the same in both, so anything that changed is lighting. We use the Multi-Illumination Dataset (MID),
         which photographs every scene 25 times with a flash bounced in a different direction, and the
         pseudo-ground-truth albedo that MIDIntrinsics derives for all 25 frames.
       </p>
@@ -1015,7 +1028,7 @@
         <img src="static/img/ciai-pairs.jpg"
              alt="The same table of objects photographed with the flash bounced in two directions, with a zoomed crop of a book cover under each. Brightness and shadows change between the two frames; the light colour changes only slightly.">
         <p class="fig-caption">
-          <strong>Figure 2. One MID pair.</strong> Same camera, same objects, the flash bounced in a different
+          <strong>Figure 3. One MID pair.</strong> Same camera, same objects, the flash bounced in a different
           direction. The flash is white, so the light mainly changes in direction and intensity.
         </p>
       </div>
@@ -1024,8 +1037,7 @@
         <img src="static/img/ciai-mechanism.jpg"
              alt="Diagram: two photographs of the same scene with the flash in different directions pass through one shared model. The two predicted albedos are tied by the invariance loss; the two predicted shadings are tied by the explanation loss on the luminance ratio.">
         <p class="fig-caption">
-          <strong>Figure 3. CIAI at training time.</strong> One shared model, two passes. The thumbnails are outputs
-          of our model.
+          <strong>Figure 4. CIAI at training time.</strong> One shared model, two passes.
         </p>
       </div>
 
@@ -1040,21 +1052,17 @@
           <div class="metric-name">L<sub>expl</sub> <span class="arrow">shading explanation</span></div>
           <div class="metric-role">the shading must explain the change</div>
           <div class="metric-desc">The log luminance ratio of the two shadings must equal that of the two
-            images. It rules out a flat albedo, and it sees brightness only.</div>
+            images. It rules out the flat albedo of Figure 1, and it sees brightness only.</div>
         </div>
       </div>
 
       <p class="ciai-text">
         The model is a frozen DINOv2-L encoder with a DPT decoder, an albedo head and a three-channel shading head
         (18.5M trainable parameters, 0.148 s per 512&times;512 image). It is first trained with supervised losses on
-        Hypersim and InteriorVerse, and CIAI is added as a second stage on raw MID pairs. L<sub>inv</sub> says "agree
-        across lights", and the supervised losses say what that agreement should look like; agreement alone could
-        also be satisfied by the same wrong albedo in both frames.
-      </p>
-      <p class="ciai-text">
-        The frozen encoder tends to wash out the albedo colour, so the model also has a <em>colour path</em>: an RGB
-        skip into the albedo head and a chroma loss on albedo. This is a design choice of the model, not part of
-        CIAI, and the skip can pass the light colour of the input into the albedo as a colour cast.
+        Hypersim and InteriorVerse, so the albedo has a reference colour before any pair is used. CIAI is then
+        added as a second stage on MID: the first frame of a pair is white-balanced and supervised, and the second
+        is left raw, so it keeps its own light colour. A <em>colour path</em> (an RGB skip and a chroma loss) keeps
+        the albedo colour that the frozen encoder tends to wash out; it is part of the model, not of CIAI.
       </p>
     </section>
 
@@ -1064,20 +1072,52 @@
     <section class="ciai-section" id="results">
       <div class="sec-eyebrow">Results</div>
       <h2 class="ciai-section-title">Stability next to accuracy</h2>
-      <p class="ciai-text">
-        A grey, constant albedo is perfectly stable, so we always report stability next to accuracy.
-      </p>
 
       <div class="ciai-figure">
         <img src="static/img/ciai-metrics.jpg"
              alt="Three small diagrams. C_mat: four bars of equal height for a stable material, unequal bars for an unstable one. Cast_rel: chroma points clustered for a stable material, sliding along the lamp colour for a drifting one. Chroma_err: prediction close to the reference colour, or far from it.">
         <p class="fig-caption">
-          <strong>Figure 4. What each MID score catches.</strong> C<sub>mat</sub> and Cast<sub>rel</sub> ask whether a
-          material stays put across lights; Chroma<sub>err</sub> asks whether that colour is correct. A grey albedo
-          can score well on the first two, so they are always read next to Chroma<sub>err</sub> and MAW.
+          <strong>Figure 5. What each MID score catches.</strong> C<sub>mat</sub> (luminance) and Cast<sub>rel</sub>
+          (hue) ask whether a material stays put across lights; Chroma<sub>err</sub> asks whether that colour is
+          correct.
         </p>
       </div>
 
+      <h3 class="ciai-section-title" style="font-size:1.05rem; margin-top:36px;">Does CIAI cause the gain?</h3>
+      <div class="results-table-wrap">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>CIAI</th>
+              <th>Colour path</th>
+              <th>C<sub>mat</sub> ↓</th>
+              <th>Cast<sub>rel</sub> ↓</th>
+              <th>MAW ΔE ↓</th>
+              <th>ARAP raw LMSE ↓</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>off</td><td>off</td><td>0.250</td><td>0.477</td><td>4.43</td><td>0.0463</td></tr>
+            <tr><td>on</td><td>off</td><td>0.180</td><td>0.447</td><td>4.63</td><td>0.0397</td></tr>
+            <tr><td>off</td><td>on</td><td>0.259</td><td>0.444</td><td class="best">4.12</td><td>0.0426</td></tr>
+            <tr class="row-ours"><td>on</td><td>on</td><td class="best">0.157</td><td class="best">0.425</td><td>4.16</td><td class="best">0.0396</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fig-caption" style="text-align:center;">
+        <strong>Table 1. Matched ablation.</strong> All rows start from one shared checkpoint with the same data and
+        steps; rows 1&rarr;2 and 3&rarr;4 change only the CIAI losses. The last row is our model.
+      </p>
+
+      <ol class="contrib-numbered">
+        <li><strong>CIAI improves luminance stability.</strong> C<sub>mat</sub> drops by 28% and 39%, while hue drift
+          (Cast<sub>rel</sub>) improves only by 6% and 4%.</li>
+        <li><strong>CIAI improves accuracy where the input carries its lighting.</strong> On raw ARAP renderings,
+          albedo LMSE drops by 14% and 7%. ARAP is never used in training.</li>
+        <li><strong>CIAI does not improve MAW.</strong> &Delta;E goes from 4.43 to 4.63 and from 4.12 to 4.16.</li>
+      </ol>
+
+      <h3 class="ciai-section-title" style="font-size:1.05rem; margin-top:44px;">How does it compare?</h3>
       <div class="results-table-wrap">
         <table class="results-table">
           <thead>
@@ -1092,9 +1132,9 @@
           <tbody>
             <tr class="row-ours">
               <td>Ours</td>
-              <td>0.157<span class="ci">[.141–.174]</span></td>
-              <td>0.425<span class="ci">[.360–.491]</span></td>
-              <td>0.129<span class="ci">[.109–.150]</span></td>
+              <td>0.157<span class="ci">[.142–.175]</span></td>
+              <td>0.425<span class="ci">[.360–.492]</span></td>
+              <td>0.129<span class="ci">[.110–.150]</span></td>
               <td>4.16</td>
             </tr>
             <tr>
@@ -1114,7 +1154,7 @@
             <tr>
               <td>CRefNet</td>
               <td>0.151<span class="ci">[.138–.164]</span></td>
-              <td>0.355<span class="ci">[.309–.406]</span></td>
+              <td>0.355<span class="ci">[.308–.405]</span></td>
               <td>0.201<span class="ci">[.165–.241]</span></td>
               <td>3.97</td>
             </tr>
@@ -1127,15 +1167,15 @@
             </tr>
             <tr>
               <td>Marigold-Light</td>
-              <td class="dim">0.546<span class="ci">[.462–.645]</span></td>
-              <td>0.392<span class="ci">[.333–.459]</span></td>
-              <td>0.154<span class="ci">[.124–.187]</span></td>
+              <td class="dim">0.546<span class="ci">[.463–.645]</span></td>
+              <td>0.392<span class="ci">[.333–.460]</span></td>
+              <td>0.154<span class="ci">[.125–.186]</span></td>
               <td>4.21</td>
             </tr>
             <tr>
               <td>Ordinal Shading</td>
-              <td>0.252<span class="ci">[.229–.279]</span></td>
-              <td class="dim">0.549<span class="ci">[.463–.637]</span></td>
+              <td>0.252<span class="ci">[.229–.280]</span></td>
+              <td class="dim">0.549<span class="ci">[.463–.638]</span></td>
               <td>0.148<span class="ci">[.130–.166]</span></td>
               <td class="dim">6.88</td>
             </tr>
@@ -1147,28 +1187,30 @@
         <span class="r4"><i></i>Clear outlier</span>
       </div>
       <p class="fig-caption" style="text-align:center;">
-        <strong>Table 1.</strong> MID held-out split, 30 scenes, raw input, one harness for every method; brackets are
+        <strong>Table 2.</strong> MID held-out split, 30 scenes, raw input, one harness for every method; brackets are
         95% bootstrap intervals over scenes. MAW uses the official scorer, except CD-IID, whose value is from its paper.
       </p>
+
       <p class="ciai-text">
         In paired per-scene tests, our model is more luminance-stable than CD-IID, both Marigold variants and
         Ordinal Shading, level with CRefNet and behind RGB&rarr;X. However, CD-IID, which predicts the shading colour
         in a separate stage, is better on all colour measures. A low drift can also come from a pale albedo, as
-        CRefNet shows in Figure 5.
+        CRefNet shows in Figure 6.
       </p>
 
       <div class="ciai-figure wide-matrix">
         <img src="static/img/ciai-qualitative.jpg"
              alt="Grid comparing input, pseudo-ground-truth albedo, and predictions from seven methods across three flash directions of the same scene. Two regions are tracked with coloured boxes across every panel: a mirror-finish calibration sphere in red, and a dark jacket in blue.">
         <p class="fig-caption">
-          <strong>Figure 5. One held-out scene, three flash directions, seven methods.</strong> The red and blue boxes
-          track the same two regions in every panel, so any change between rows comes from the model.
+          <strong>Figure 6. One held-out scene, three flash directions, seven methods.</strong> The red and blue boxes
+          track the same two regions in every panel, so any change between rows comes from the model. The figures
+          on this page show our model trained for 20k further iterations.
         </p>
       </div>
 
       <h3 class="ciai-section-title" style="font-size:1.05rem; margin-top:44px;">Try it yourself</h3>
       <p class="ciai-text">
-        Pick a model and step through four held-out scenes. Every prediction is a real checkpoint output.
+        Pick a model and step through four held-out scenes.
       </p>
       <div class="compare-widget" id="compareWidget">
         <div class="compare-tabs" id="compareTabs"></div>
@@ -1189,28 +1231,6 @@
         </div>
       </div>
 
-      <h3 class="ciai-section-title" style="font-size:1.05rem; margin-top:44px;">What the ablation isolates</h3>
-      <div class="results-table-wrap">
-        <table class="results-table">
-          <thead>
-            <tr><th></th><th>CIAI off</th><th></th><th>CIAI on</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Colour path off</td><td>Row 1<span class="ci">C<sub>mat</sub> 0.250</span></td><td>&rarr;</td><td>Row 2<span class="ci">C<sub>mat</sub> 0.180</span></td></tr>
-            <tr class="row-ours"><td>Colour path on</td><td>Row 3<span class="ci">C<sub>mat</sub> 0.259</span></td><td>&rarr;</td><td>Row 4 (ours)<span class="ci">C<sub>mat</sub> 0.157</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="fig-caption" style="text-align:center;">
-        <strong>Table 2.</strong> One shared checkpoint, same data and steps. Each arrow changes only the CIAI losses.
-      </p>
-      <ol class="contrib-numbered">
-        <li><strong>CIAI improves luminance stability.</strong> C<sub>mat</sub> drops by 28% and 39%, while hue drift
-          (Cast<sub>rel</sub>) improves only by 6% and 4%.</li>
-        <li><strong>CIAI improves accuracy where the input carries its lighting.</strong> On raw ARAP renderings,
-          albedo LMSE drops by 14% and 7%; after white balance the change is small. ARAP is never used in training.</li>
-        <li><strong>CIAI does not improve MAW.</strong> &Delta;E goes from 4.43 to 4.63 and from 4.12 to 4.16.</li>
-      </ol>
     </section>
 
     <div class="ciai-divider"></div>
@@ -1222,19 +1242,19 @@
       <ul class="contrib-list">
         <li><strong>Colour.</strong> The explanation loss uses luminance only, and MID's flash is white, so the light
           colour changes only slightly between frames (median chromaticity gap 0.030). As a result, our hue drift
-          still grows with the light colour, as in a grey-shading model.</li>
+          still grows with the light colour, nearly as much as in a grey-shading model.</li>
         <li><strong>Reflective surfaces.</strong> An albedo&ndash;shading product cannot represent a mirror, so the
-          reflection moves into the albedo as the light moves (Figure 6).</li>
+          reflection moves into the albedo as the light moves (Figure 7).</li>
         <li><strong>Hard shadows.</strong> A sharp cast shadow can still be read as a material boundary.</li>
-        <li><strong>Provisional numbers.</strong> The ARAP numbers use an evaluation mask that fails on ARAP's mixed
-          ground-truth encodings, and the images on this page come from a later checkpoint of the same model. Both
-          will be regenerated.</li>
+        <li><strong>ARAP is a within-study comparison.</strong> ARAP stores its ground truth in three encodings and
+          one fixed mask is applied to every model, so the ARAP numbers compare models with each other, not with
+          published ARAP results.</li>
       </ul>
       <div class="ciai-figure">
         <img src="static/img/ciai-limit-reflective.jpg"
              alt="A mirror sphere under four flash directions (top) and our predicted albedo for each (bottom); the reflections change between the four albedos.">
         <p class="fig-caption">
-          <strong>Figure 6. Reflective surfaces.</strong> The mirror sphere from the teaser: its reflections change
+          <strong>Figure 7. Reflective surfaces.</strong> The mirror sphere from the teaser: its reflections change
           with the light in the input and in our albedo.
         </p>
       </div>
@@ -1242,19 +1262,19 @@
 
     <div class="ciai-divider"></div>
 
-    <!-- Next -->
+    <!-- Future work -->
     <section class="ciai-section" id="next">
-      <div class="sec-eyebrow">Next steps</div>
+      <div class="sec-eyebrow">Future work</div>
       <h2 class="ciai-section-title">From luminance to colour</h2>
       <p class="ciai-text">
         The next model splits the shading into a grey part and a colour part, so that a change in light colour has
-        a place to go other than the albedo. It is <strong>planned and not trained yet</strong>.
+        a place to go other than the albedo.
       </p>
       <div class="ciai-figure">
         <img src="static/img/ciai-pipeline.jpg"
              alt="Pipeline diagram. Two photographs of one rendered living room, one under an orange light and one under a green light, go through a shared model. Each pass outputs an albedo, a grey shading and a shading chroma. The two albedos are tied by L_inv, the two grey shadings by L_lum_expl, and the two chroma maps by L_chr_expl, which applies only when the pair's illuminant gap is at least 0.08.">
         <p class="fig-caption">
-          <strong>Figure 7. Planned pipeline.</strong> The output panels are ground-truth targets from a rendered
+          <strong>Figure 8. Future pipeline.</strong> The output panels are ground-truth targets from a rendered
           3D-Front scene (S = I / A), not predictions. Light-grey pixels are masked, and chroma is shown at constant
           luminance.
         </p>
@@ -1279,11 +1299,11 @@
       <div class="bibtex-block">
 <button class="copy-btn" onclick="copyBibtex(this)"><i class="far fa-copy"></i> Copy</button>
 <pre id="bibtex-src">@misc<span class="bibtex-brace">{</span><span class="bibtex-key">tran2026ciai</span>,
-  <span class="bibtex-key">title</span>  = <span class="bibtex-brace">{</span><span class="bibtex-val">Cross-Illumination Albedo Invariance: Luminance-Stable Intrinsic
-            Decomposition from Real Multi-Illumination Photographs</span><span class="bibtex-brace">}</span>,
+  <span class="bibtex-key">title</span>  = <span class="bibtex-brace">{</span><span class="bibtex-val">Luminance Constancy in Intrinsic Image Decomposition via
+            Cross-Illumination Albedo Invariance ({CIAI})</span><span class="bibtex-brace">}</span>,
   <span class="bibtex-key">author</span> = <span class="bibtex-brace">{</span><span class="bibtex-val">Tran, Minh Khang</span><span class="bibtex-brace">}</span>,
   <span class="bibtex-key">year</span>   = <span class="bibtex-brace">{</span><span class="bibtex-val">2026</span><span class="bibtex-brace">}</span>,
-  <span class="bibtex-key">note</span>   = <span class="bibtex-brace">{</span><span class="bibtex-val">Project report, revised from the author's MSc thesis (Erasmus Mundus
+  <span class="bibtex-key">note</span>   = <span class="bibtex-brace">{</span><span class="bibtex-val">Project report based on the author's MSc thesis (Erasmus Mundus
             Joint Master in Computational Colour and Spectral Imaging, NTNU)</span><span class="bibtex-brace">}</span>,
   <span class="bibtex-key">url</span>    = <span class="bibtex-brace">{</span><span class="bibtex-val">https://github.com/tmkhang1999/CIAI</span><span class="bibtex-brace">}</span>
 <span class="bibtex-brace">}</span></pre>

@@ -7,7 +7,7 @@ $\mathbf{A} \in [0,1]^{H \times W \times 3}$
   & Albedo (intrinsic material colour) \\
 
 $\mathbf{S}_d \in \mathbb{R}_{>0}^{H \times W \times 3}$
-  & Colored diffuse shading (three-channel) \\
+  & Coloured diffuse shading (three-channel) \\
 
 $\mathbf{R} \in \mathbb{R}_{\geq 0}^{H \times W \times 3}$
   & Non-diffuse residual; $\mathbf{R} = (\mathbf{I} - \mathbf{A} \odot \mathbf{S}_d)_{+}$ \\
@@ -19,7 +19,7 @@ $(\mathbf{I}_1,\, \mathbf{I}_2)$
   & A cross-illumination pair: same scene photographed under two different illuminants \\
 
 $\Omega_v$
-  & Set of valid paired pixels (excludes clipped/near-black pixels in either frame of a pair) \\
+  & Valid paired pixels: luminance between the 15th and 97th percentile in both frames of a pair \\
 
 $\Omega_m,\, \Omega_d$
   & Set of pixels with valid ground-truth labels; set of pixels with diffuse-shading ground truth \\
@@ -31,7 +31,7 @@ $L(\cdot)$
   & Rec.~601 luminance of an RGB quantity \\
 
 $\mathcal{L}_{\text{a}}$
-  & Albedo $\ell_1$ supervision loss \\
+  & Albedo squared-error supervision loss \\
 
 $\mathcal{L}_{\text{dssim}}$
   & Albedo structural-dissimilarity loss \\
@@ -67,13 +67,16 @@ $\lambda_{\star}$
   & Weight of the corresponding loss term $\mathcal{L}_{\star}$ \\
 
 $C_{\text{mat}}$
-  & MID chromaticity constancy metric (lower is better) \\
+  & MID luminance-stability metric (lower is better) \\
 
 $C_{\text{arap}}$
-  & ARAP constancy metric (lower is better) \\
+  & ARAP luminance-stability metric (lower is better) \\
 
-$\text{Cast}_{\text{RMS}}$
-  & RMS colour cast residual (lower is better) \\
+$\text{Cast}_{\text{rel}}$
+  & MID hue drift relative to the model's own chroma spread (lower is better) \\
+
+$\text{Chroma}_{\text{err}}$
+  & MID chromaticity error against the pseudo-ground truth (lower is better) \\
 
 $\text{WHDR}$
   & Weighted Human Disagreement Rate on IIW (lower is better) \\

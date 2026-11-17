@@ -46,7 +46,7 @@ twoside,
 
 % ---------- Thesis information ----------
 % Enter the title of your project
-\newcommand{\titleEng}{Cross-Illumination Albedo Invariance:\\Luminance-Stable Intrinsic Decomposition\\from Real Multi-Illumination Photographs}%
+\newcommand{\titleEng}{Luminance Constancy in Intrinsic Image Decomposition\\via Cross-Illumination Albedo Invariance (CIAI)}%
 
 % Enter your first and last name
 \newcommand{\name}{Minh Khang Tran}%
@@ -67,6 +67,7 @@ twoside,
 \newcommand{\submissiondate}{15\textsuperscript{th} July 2026}%
 \newcommand{\Defencedate}{1\textsuperscript{st} September 2026}%
 
+\providecommand{\appref}[1]{Appendix~\ref{#1}}
 % labels for inter-chapter cross-references (used in Chapter 1 \chapref calls)
 \newcommand{\ch}[1]{\ref{#1}}
 
@@ -92,7 +93,7 @@ twoside,
   linkbordercolor={1 0 0},
   citebordercolor={0 0.45 0},
   urlbordercolor={0 0 1},
-  pdftitle={Cross-Illumination Albedo Invariance: Luminance-Stable Intrinsic Decomposition from Real Multi-Illumination Photographs},
+  pdftitle={Luminance Constancy in Intrinsic Image Decomposition via Cross-Illumination Albedo Invariance (CIAI)},
   pdfauthor={\name},
   pdfsubject={Intrinsic Image Decomposition; Illumination Invariance; Cross-Illumination Albedo Invariance},
   pdfkeywords={intrinsic image decomposition, illumination invariance, albedo, multi-illumination, CIAI, DINOv2, DPT},
@@ -117,6 +118,9 @@ twoside,
     \include{./chapters/Chapter7}   % Conclusion
 
 
+
+    \appendix
+    \include{chapters/APPENDIX/AppendixA}
 
     \include{chapters/BACKMATTER/99-backmatter}
 

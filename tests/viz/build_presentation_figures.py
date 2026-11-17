@@ -7,6 +7,9 @@ are not reused. The one figure that shows our model is cropped from the page tea
 was rendered with a later checkpoint of the same model.
 
 Outputs:
+  documents/thesis/images/intro/{input,albedo,shading,residual}.png
+                                              Figure 1.1: one Hypersim image with its ground-truth
+                                              layers I, A, S_d and R (slide 3), residual shown at 3x
   docs/static/img/ciai-metrics.jpg            the three MID metric diagrams (slides 24-25), one row
   docs/static/img/ciai-baselines.jpg          CRefNet and Marigold-App under two lights (slide 6)
   docs/static/img/ciai-limit-reflective.jpg   mirror sphere: input and our albedo, four lights
@@ -41,6 +44,12 @@ METRIC_CARDS = [
 # The deck's fourth card (image71, chroma spread) is left out on purpose: the spread ratio is
 # not one of the reported metrics.
 BASELINES = 'image26.jpg'
+HYPERSIM_LAYERS = 'image19.jpg'   # slide 3: Hypersim photograph, A, S_d and R side by side
+
+# Hypersim layers strip: x ranges of the four panels and the row where the panels start.
+LAYER_COLS = [(0, 624), (633, 1255), (1267, 1888), (1901, 2522)]
+LAYER_TOP = 43
+LAYER_NAMES = ['input', 'albedo', 'shading', 'residual']
 
 # Teaser layout (docs/static/img/ciai-teaser.jpg, 1700 x 497): four panels per row.
 TEASER_COLS = [(287, 637), (642, 992), (996, 1346), (1351, 1700)]
@@ -82,6 +91,18 @@ def build_metrics(pptx: Path):
                fill=MUTE, font=fr, anchor='lm')
         canvas.paste(c, (x, y + head))
     save(canvas, WEB / 'ciai-metrics.jpg', max_width=1600)
+
+
+def build_hypersim_layers(pptx: Path):
+    strip = read_media(pptx, HYPERSIM_LAYERS)
+    if strip.width < LAYER_COLS[-1][1]:
+        raise SystemExit(f'{HYPERSIM_LAYERS} is {strip.size}; the panel layout no longer matches')
+    for (x0, x1), name in zip(LAYER_COLS, LAYER_NAMES):
+        dst = THESIS / 'intro' / f'{name}.png'
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        panel = strip.crop((x0, LAYER_TOP, x1, strip.height))
+        panel.save(dst)
+        print(f'  {dst.relative_to(ROOT)}  {panel.size}')
 
 
 def build_baselines(pptx: Path):
@@ -126,6 +147,7 @@ def main():
     args = ap.parse_args()
     if not args.pptx.exists():
         raise SystemExit(f'deck not found: {args.pptx}')
+    build_hypersim_layers(args.pptx)
     build_metrics(args.pptx)
     build_baselines(args.pptx)
     build_reflective()

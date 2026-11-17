@@ -8,7 +8,7 @@ how the room was lit, although the paint has not changed.
 
 We train against this leakage with \emph{Cross-Illumination Albedo Invariance} (CIAI).
 Two photographs of the same scene under different illumination pass through the same
-network; an invariance loss requires their predicted albedos to agree, and an explanation
+network. An invariance loss requires their predicted albedos to agree, and an explanation
 loss requires the ratio of the two predicted shadings to match the luminance ratio of the
 two images. The idea follows Siamese representation learning and multi-view consistency in
 3D reconstruction, with positive pairs only. No dataset offers real photographs under
@@ -16,35 +16,21 @@ several illuminations together with dense measured albedo, so we use the Multi-I
 Dataset (MID), in which every scene is photographed 25 times with a flash bounced in a
 different direction, and the pseudo-ground-truth albedo that MIDIntrinsics derives for all
 25 frames. CIAI is added as a second training stage to a model with a frozen DINOv2-Large
-encoder, a DPT decoder and three-channel shading; inference remains a single image and a
+encoder, a DPT decoder and three-channel shading. Inference remains a single image and a
 single forward pass.
 
 In matched ablations CIAI reduces the variation of a material's recovered luminance across
 illuminations ($C_{\text{mat}}$) by $28\%$ and $39\%$, and on synthetic ARAP renderings with
 their original coloured lighting it also lowers the dense albedo error by $7$--$14\%$. Our
 model is more luminance-stable than CD-IID, both Marigold variants and Ordinal Shading, level
-with CRefNet and behind RGB$\rightarrow$X, while training $18.5$M parameters.
+with CRefNet and behind RGB$\rightarrow$X, while training $18.5$M parameters. Every stability
+result is reported next to accuracy against measured albedo (MAW) and against the MID
+pseudo-ground truth, because a grey, constant albedo is perfectly stable.
+
 However, CIAI does not make the albedo stable in \emph{colour}. The explanation loss is
-defined on luminance, and MID's flash is white: between two frames the light changes mainly
-in direction and intensity, and its chromaticity moves by a median of only $0.030$. Under
-CIAI the scale-normalised hue drift improves by only $4$--$6\%$, and our model's hue drift
-still grows with the illuminant colour as much as that of a grey-shading method. CD-IID,
-which predicts the shading colour in a dedicated stage, leads both hue drift and chroma
-accuracy. We therefore propose, as the next stage, a shading split into a luminance and a
-chroma factor, a chroma explanation loss on the chroma factor, and training pairs whose
-illuminant colour genuinely varies.
-
-Every stability result is reported next to accuracy against measured albedo (MAW) and
-against the MID pseudo-ground truth, because a grey, constant albedo is perfectly stable.
-
-\paragraph*{Note on this revised edition.}
-This edition corrects the version submitted in July 2026. That version described MID as a
-source of coloured-illuminant pairs and attributed the pooled chroma score to the
-literature; both were wrong. Its headline model came from a refinement study that changed
-several regularisers and the data mix at once; that study is removed, and the model
-reported throughout is now the complete CIAI configuration of the matched ablation. The
-follow-up colour studies are also removed, and the colour limitation is reported as a
-limitation with a plan. The ARAP numbers were obtained with an evaluation mask that fails on
-ARAP's mixed ground-truth encodings and are marked provisional. Several qualitative figures
-were rendered with later checkpoints of the same architecture (see \secref{sec:exp_setup});
-they will be regenerated.
+defined on luminance, and MID's flash is white, so its chromaticity moves by a median of
+only $0.030$ between frames. Hue drift improves by only $4$--$6\%$ and still grows with the
+illuminant colour, as in a grey-shading method. CD-IID, which predicts the shading colour in
+a dedicated stage, leads both hue drift and chroma accuracy. We therefore propose, as the
+next stage, a shading split into a luminance and a chroma factor, a chroma explanation loss
+on the chroma factor, and training pairs whose illuminant colour genuinely varies.

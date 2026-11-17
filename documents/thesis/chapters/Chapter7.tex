@@ -24,7 +24,7 @@ training $18.5$M parameters. It is behind CD-IID on in-domain chroma error and m
 MAW.
 
 The strategy does not deliver colour stability. Hue drift improves only slightly under
-CIAI, and our model's drift grows with the illuminant colour as much as a grey-shading
+CIAI, and our model's drift grows with the illuminant colour nearly as much as a grey-shading
 method's, which is what a luminance-only explanation loss and MID's white flash predict. The
 method that does show colour-independent drift, CD-IID, predicts the shading colour in a
 dedicated stage, which suggests a structural remedy: a model that separates shading
@@ -51,14 +51,15 @@ fine-tuned transformer or diffusion models is untested. Most comparisons are sin
 training runs, so small differences should not be read as effects.
 
 \paragraph{Benchmarks}
-The ARAP results were computed with a mask that fails on ARAP's mixed ground-truth
-encodings and are provisional (\secref{sec:arap_results}). MID is in the training data of
+The ARAP evaluation uses one fixed albedo mask for every model. It keeps few pixels in the
+scenes whose ground truth is stored at a small scale, so ARAP supports comparisons between
+models but not with published ARAP numbers (\secref{sec:arap_results}). MID is in the training data of
 both our model and CD-IID, so no MID comparison is zero-shot, and its pseudo-ground truth
 is itself derived from the capture stack.
 
 \paragraph{Single-image accuracy}
 CIAI buys stability, not single-image accuracy: on MAW it slightly worsens both measures,
-and on IIW the model trails most baselines. A stronger base model, or the cross-architecture
+and on IIW the model trails every locally evaluated baseline. A stronger base model, or the cross-architecture
 study below, is needed before the strategy can be judged on accuracy.
 
 \paragraph{Achromatic ambiguity and non-diffuse surfaces}
@@ -74,8 +75,7 @@ same way, in our albedo.
   \caption[Reflective surfaces stay unstable.]{%
     A mirror sphere under four flash directions (top) and our predicted albedo for each
     (bottom). The reflections change with the light in both rows, because a diffuse
-    albedo--shading product cannot represent a mirror. Rendered with a later checkpoint of the
-    same model (see \secref{sec:exp_setup}).
+    albedo--shading product cannot represent a mirror.
   }
   \label{fig:limit_reflective}
 \end{figure}
@@ -96,6 +96,22 @@ prediction a differentiable function of the input so that a paired loss can be a
 it. The claim to test is a consistent reduction in $C_{\text{mat}}$ without loss on MAW.
 
 \paragraph{2. A shading model that separates luminance from chroma}
+\figref{fig:trifactor} shows the planned pipeline.
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=\textwidth]{images/report/ciai_pipeline.jpg}
+  \caption[The planned three-factor model.]{%
+    The planned model, which is not trained yet. Two photographs of one rendered scene under
+    two light colours pass through one shared model with three outputs: the albedo $\mathbf{A}$,
+    the grey shading $S_{\text{lum}}$ and the shading chroma $\mathbf{C}$. The output panels are
+    ground-truth targets ($\mathbf{S} = \mathbf{I} / \mathbf{A}$), not predictions. The three losses
+    tie the two passes together; the chroma term applies only when the illuminant gap of the
+    pair is at least $0.08$.
+  }
+  \label{fig:trifactor}
+\end{figure}
+
 Predict the image as
 \begin{equation}
   \mathbf{I} = \mathbf{A} \odot \bigl(S_{\text{lum}}\,\mathbf{C}\bigr) + \mathbf{R},
@@ -105,7 +121,7 @@ Predict the image as
 with a scalar shading luminance $S_{\text{lum}}$, a unit-luminance shading chroma map
 $\mathbf{C}$ predicted by its own head with a low-frequency and a global component, and
 the albedo $\mathbf{A}$. This follows the separation that makes CD-IID colour-stable, inside
-a single network (\texttt{src/models/trifactor\_net.py}). The colour path changes accordingly:
+a single network. The colour path changes accordingly:
 the albedo head receives the illuminant-corrected image
 $\mathbf{I} / (S_{\text{lum}}\mathbf{C})$ rather than the raw input, so that material colour
 reaches it and illuminant colour does not. A three-row ablation (raw skip, corrected skip,
@@ -122,10 +138,9 @@ colour into the chroma factor. Apply it only to pairs whose measured illuminant 
 a threshold (for example $0.08$), since on near-neutral pairs it would fit noise. Supervise $\mathbf{C}$ directly wherever ground truth exists.
 
 \paragraph{4. Training pairs whose illuminant colour actually varies}
-A rendered corpus built from 3D-FRONT covers the range from near-neutral to strongly coloured pairs
-(tenth to ninetieth percentile gap $0.008$ to $0.35$) with exact albedo and shading chroma;
-its pilot fails only a hard-shadow quality gate, which should not block its use for
-colour. Real coloured pairs are the other half: the LSMI dataset \mycite{kim21lsmi}
+Rendered pairs can provide this signal with exact albedo and shading chroma: a first test
+render of furnished 3D-FRONT rooms under coloured lights already spans pair gaps from
+near-neutral to strongly coloured (tenth to ninetieth percentile $0.008$ to $0.35$). Real coloured pairs are the other half: the LSMI dataset \mycite{kim21lsmi}
 photographs each scene under several combinations of two or three illuminants and provides
 per-pixel illuminant chromaticity, which yields both cross-illumination pairs and a direct
 target for $\mathbf{C}$. If neither transfers, a small capture of our own with coloured
@@ -133,7 +148,7 @@ filters on an MID-style rig would provide pixel-aligned real pairs with known co
 changes.
 
 \paragraph{5. Evaluation on a real colour range}
-Regenerate ARAP with encoding-aware masks; report hue drift on the ARAP pairs whose
+Evaluate ARAP with encoding-aware masks; report hue drift on the ARAP pairs whose
 illuminant colour changes by at least $0.15$ (26 pairs in 17 scenes), on held-out LSMI
 scenes and on held-out 3D-Front pairs, always beside MAW; and report the absolute drift
 together with the relative one, so that a reduction in drift accompanied by a loss of

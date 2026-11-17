@@ -4,12 +4,9 @@
 \chapter{Related Work}
 \label{ch:related}
 
-\myquotation{%
-The history of science is the history of struggles against the default assumption.}{%
-Anonymous}
-
-This chapter reviews prior work that is relevant to the approach taken in this
-thesis.
+The purpose of this chapter is to place CIAI among prior work: what earlier IID methods
+assume about the illuminant, how training on one scene under several lights has been used
+before, and which benchmarks can test stability and accuracy.
 We cover classical and learning-based IID methods in Sections \ref{sec:classical_iid}
 and \ref{sec:learning_iid}, work on multi-illuminant scenes and colour constancy in
 \secref{sec:multiillum}, and the evaluation benchmarks we use in \secref{sec:benchmarks}.
@@ -83,18 +80,9 @@ CGIntrinsics established the pattern that has dominated the field since:
 train on photorealistic synthetic data with ground-truth labels, then evaluate
 on real images.
 
-\mycitetext{bell14iiw} introduced the Intrinsic Images in the Wild (IIW) benchmark,
-which takes a different approach to ground truth.
-Rather than rendering or measuring true albedos, IIW collects human judgements about
-relative albedo comparisons: for any two surface patches in a photograph, human
-annotators say which one is lighter.
-This produces a set of relative constraints that any valid albedo prediction must
-satisfy.
-The evaluation metric, the Weighted Human Disagreement Rate (WHDR), measures how
-often the model's albedo ordering disagrees with the majority of human annotators.
-IIW became the standard benchmark for IID for many years and is still widely used.
-Its limitation is that it captures perceptual shading quality (whether shadows look
-right) more than it captures the accuracy of the recovered material colour.
+\mycitetext{bell14iiw} introduced the Intrinsic Images in the Wild (IIW) benchmark of human
+lightness judgements (\secref{sec:benchmarks}), which became the field's standard test of
+real photographs, although it measures relative lightness rather than material colour.
 
 A line of work by Careaga and Aksoy is the closest to ours in its treatment of
 illumination colour.
@@ -103,7 +91,7 @@ estimating shading up to an ordinal (ordering) constraint, which is far more
 robust than absolute regression, and then refining the albedo; its shading is
 still greyscale.
 Its successor, Colorful Diffuse IID (CD-IID) \mycite{careaga24cdiid}, is the
-first method to explicitly predict a \emph{colored} diffuse shading in the wild,
+first method to explicitly predict a \emph{coloured} diffuse shading in the wild,
 through a multi-stage cascade (grey decomposition, then a low-resolution
 chromaticity network, then albedo and diffuse-shading refinement) and an analytic
 non-diffuse residual.
@@ -130,7 +118,7 @@ Very recent work reaches for external knowledge instead: ReasonX
 reports strong IIW WHDR improvements; no public checkpoint was available at the
 time of writing, so we cite its published numbers only where protocols match.
 
-\paragraph{Comparison scope.}
+\paragraph{Comparison scope}
 The methods above are not all compared in the same way. We run models locally
 only when an official checkpoint and compatible output are available: Marigold-IID,
 CRefNet, Ordinal Shading, CD-IID and RGB$\rightarrow$X \mycite{zeng24rgbx}. We cite
@@ -172,7 +160,7 @@ This is a different task from IID (they estimate illuminant colours rather than
 separate albedo from shading), but the setup is closely related and provides
 inspiration for the multi-illuminant pair training we use in this work.
 
-\paragraph{Training on one scene under several illuminations.}
+\paragraph{Training on one scene under several illuminations}
 Using several images of a static scene under changing light is an old idea in IID:
 the reflectance is shared across the images while the illumination is not.
 \mycitetext{li18bigtime} learn a single-image decomposition from time-lapse sequences
@@ -188,6 +176,32 @@ supervised synthetic training, on real raw multi-illumination photographs, and m
 separately what it does to luminance and to colour. The constraint is also close in spirit
 to Siamese representation learning without negatives \mycite{chen21simsiam}, where two
 views of one object must map to one representation.
+
+\tabref{tab:paired_work} summarises how these works, and the two methods closest to ours,
+use images of one scene under several lights.
+
+\begin{table}[t!]
+  \caption[Training on one scene under several lights.]{%
+    How prior work uses images of one scene under several lights, compared with CIAI. All
+    methods take a single image at inference.
+  }
+  \label{tab:paired_work}
+  \centering
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.27\textwidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    Method & Where the pairs come from & How the pairs are used \\
+    \midrule
+    \mycitetext{li18bigtime} & Real time-lapse sequences & Main supervision (shared reflectance) \\
+    \mycitetext{lettry18unsupervised} & Illumination-varying sequences & Main supervision (Siamese) \\
+    \mycitetext{ma18single} & Pairs of one scene under two lights & Main supervision (two streams) \\
+    \mycitetext{kinoshita21consistency} & Simulated illumination variants & Main supervision (reflectance consistency) \\
+    CD-IID \mycite{careaga24cdiid} & None & Single images; colour from a shading-chroma stage \\
+    \midrule
+    CIAI (ours) & Real raw MID flash pairs & Second stage after supervised synthetic training \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
 
 The closest prior work in its treatment of illuminant colour is the self-supervised
 decomposition network of \mycitetext{kinoshita21consistency}.
@@ -222,7 +236,7 @@ report them alongside, not instead of, accuracy against measured albedo.
 We evaluate our model on four benchmarks that together cover different aspects of IID
 quality.
 
-\paragraph{Dataset, split, protocol, and benchmark.}
+\paragraph{Dataset, split, protocol, and benchmark}
 These terms are kept distinct throughout the thesis. A \emph{dataset} is a
 collection of images and annotations. A \emph{split} identifies which samples
 are used for training, validation, or testing. An evaluation \emph{protocol}
@@ -237,6 +251,25 @@ surface stays stable across lights; MAW measures real material colour on sampled
 regions; ARAP provides dense synthetic albedo and repeated illumination; IIW
 tests whether predicted relative reflectance agrees with people. No single score
 is treated as a complete definition of IID quality.
+\figref{fig:datasets} shows one example of each benchmark and the ground truth it provides.
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=0.92\textwidth]{images/datasets/datasets.jpg}
+  \caption[The four evaluation benchmarks and their supervision.]{%
+    The four evaluation benchmarks and the ground truth each provides, in the order of \secref{sec:benchmarks}.
+    \textbf{MID}: real multi-illuminant captures of one scene, with no measured albedo;
+    which is why it supports a ground-truth-free constancy diagnostic and nothing stronger.
+    \textbf{IIW}: real photographs with \emph{no} albedo ground truth at all. The second
+    panel overlays the annotation that does exist: sparse pairwise human lightness
+    judgements, each a pair of points one of which was called darker ($\bullet$) than the
+    other ($\circ$). These sparse ordinal comparisons define what WHDR scores;
+    they are informative about relative lightness but not RGB colour.
+    \textbf{MAW}: real photographs with physically measured albedo on masked patches.
+    \textbf{ARAP}: synthetic renders with dense ground-truth albedo.
+  }
+  \label{fig:datasets}
+\end{figure}
 
 \subsection{IIW}
 
@@ -254,7 +287,7 @@ We evaluate on the standard test split of 1,046 images (every fifth image of the
 5,230), and report WHDR as the mean over images rather than pooled over
 judgements.
 
-\subsection{MID: Multi-Illuminant Dataset}
+\subsection{MID: Multi-Illumination Dataset}
 \label{sec:mid_dataset}
 
 MID, the Multi-Illumination Dataset of \mycitetext{midintrinsics}, is the dataset
@@ -264,9 +297,9 @@ fixed viewpoint with a flash bounced in a different direction for every shot, an
 a grey and a chrome probe in every frame.
 The flash is white, so between two frames the light changes mainly in
 \emph{direction and intensity}. Its colour changes only because the bounced light picks up
-the colour of the wall or ceiling it reflects from: measured on the grey probes, the median
-chromaticity distance between the illuminants of two frames of a scene is $0.030$, and
-$86\%$ of frame pairs lie below $0.08$ (\secref{sec:colour_axis}).
+the colour of the wall or ceiling it reflects from: measured on the grey probes over all 25 flash
+directions, the median chromaticity distance between the illuminants of two frames of a scene
+is $0.030$, and $86\%$ of frame pairs lie below $0.08$ (\secref{sec:colour_axis}).
 The key property is that the albedo of each surface does not change across the 25
 frames; only the light does. MIDIntrinsics \mycite{careaga23ordinal} adds one dense
 pseudo-ground-truth albedo per scene, derived from the white-balanced capture stack and
@@ -290,8 +323,8 @@ across renderings, which is the axis this thesis targets.
 ARAP provides ground-truth albedo images, which allows measuring not only stability
 across conditions (the $C_{\text{arap}}$ metric) but also the accuracy of the predicted
 albedo against the ground truth. The ground truth is, however, stored in three different
-encodings across scenes, which our evaluation mask did not account for; the ARAP numbers
-in \chapref{ch:experiments} are therefore provisional (\secref{sec:arap_results}).
+encodings across scenes; \secref{sec:arap_results} describes how our evaluation mask
+treats them.
 The constancy metrics group scene renderings by the illuminant condition and
 measure how consistent the predicted albedo is across groups.
 Our local study reports LMSE, SSIM, and a mean-normalised RMSE diagnostic. This

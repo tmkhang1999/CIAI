@@ -1,8 +1,8 @@
 <div align="center">
 
-# Cross-Illumination Albedo Invariance (CIAI)<br>Luminance-Stable Intrinsic Decomposition from Real Multi-Illumination Photographs
+# Luminance Constancy in Intrinsic Image Decomposition<br>via Cross-Illumination Albedo Invariance (CIAI)
 
-**Train on two photographs of one scene under different lighting, and the albedo stops changing with the light.**
+**Train on two photographs of one scene under different lighting, and the albedo luminance changes much less with the light.**
 
 **Minh Khang Tran** &middot; MSc thesis project, 2026
 
@@ -19,17 +19,24 @@
 
 ## Overview
 
-Intrinsic image decomposition (IID) splits a photograph into the albedo of each surface and the shading that falls on it. However, a single image cannot tell a dark surface from a dimly lit one, so part of the lighting leaks into the albedo. As a result, the same wall can come out lighter or darker depending on how the room was lit.
+- **Problem.** A single photograph cannot tell a dark surface from a dimly lit one, so part of the lighting leaks into the recovered albedo. The same wall can come out lighter or darker depending on how the room was lit.
+- **Goal.** Predict, from one image, an albedo whose luminance stays the same when only the light changes, without losing the colour of the material.
+- **Why it is hard.** Real photographs have no albedo ground truth. Stability alone has a trivial solution: a flat grey albedo never changes, but it is wrong (Figure 2). And the only real dataset with many lights per scene and a dense albedo reference, MID, uses a white flash, so its light colour barely changes.
+- **Idea.** Two photographs of one scene under different lighting go through the same network. Their albedos must agree, and their shadings must explain the change in brightness. The pairs are used only in training, so inference is one image and one pass.
+- **Result.** In a matched ablation, CIAI lowers the luminance variation of a material across lighting by **28% and 39%**, and the albedo error on raw ARAP renderings by **7-14%**, a benchmark never used in training.
+- **Limit.** Hue drift improves only by 4-6%, because the explanation loss uses luminance only.
 
-Our question is whether paired photographs, used only in training, can make the albedo stable under changing light while inference stays one image and one pass. To answer it, we propose **Cross-Illumination Albedo Invariance (CIAI)**. Two photographs of one scene under different lighting go through the same network,, and their predicted albedos must agree.
+<div align="center">
+<img src="documents/thesis/images/readme/ciai-stable-vs-correct.jpg" width="85%" alt="Schematic: three materials predicted from two frames. (a) The brightness pattern of the light stays in the albedo. (b) A flat grey albedo is identical in both frames but has lost all colour. (c) The goal is identical and keeps the colours."/>
+</div>
 
-In a matched ablation, CIAI lowers the luminance variation of a material across lighting by **28% and 39%**. In addition, it lowers the albedo error by 7-14% on ARAP renderings that keep their original coloured light, although ARAP is never used in training. However, it improves colour much less (hue drift -4 to -6%), because the explanation loss uses luminance only.
+**Figure 2.** Why stability must be read next to accuracy. A flat grey albedo (b) is perfectly stable, so CIAI has a second loss, and every stability score here is reported next to an accuracy score.
 
 ## Contributions
 
-1. A paired training strategy on real photographs: MID pairs with pseudo-ground-truth albedo, added as a second training stage.
-2. A matched ablation showing the effect on luminance stability and on albedo accuracy.
-3. An evaluation that reports every stability score next to an accuracy score, because a grey, constant albedo is perfectly stable.
+1. **A paired training strategy on real photographs.** MID pairs with pseudo-ground-truth albedo, added as a second training stage.
+2. **A matched ablation** that isolates the effect of CIAI on luminance stability and on albedo accuracy.
+3. **An evaluation that reports every stability score next to an accuracy score.**
 
 ## Method
 
@@ -37,20 +44,20 @@ In a matched ablation, CIAI lowers the luminance variation of a material across 
 <img src="documents/thesis/images/readme/ciai-mechanism.jpg" width="90%" alt="Two photographs of one scene pass through a shared model; the two albedos are tied by L_inv and the two shadings by L_expl."/>
 </div>
 
-**Figure 2.** CIAI is used in training only. Two flash directions of one scene share one model.
+**Figure 3.** CIAI is used in training only. Two flash directions of one scene share one model.
 
 The model is a frozen DINOv2-L encoder with a DPT decoder, an albedo head and a three-channel shading head (18.5M trainable parameters). A residual R = (I - A * S)<sub>+</sub> absorbs highlights. Training has two stages:
 
-- **Stage A.** Supervised training on Hypersim and InteriorVerse.
-- **Stage B (CIAI).** Training continues on raw pairs from the Multi-Illumination Dataset (MID), where every scene is photographed 25 times with a flash bounced in a different direction, with the pseudo-ground-truth albedo from [MIDIntrinsics](https://github.com/compphoto/MIDIntrinsics). Two losses tie the pair:
+- **Stage A.** Supervised training on Hypersim and InteriorVerse, so the albedo has a reference colour before any pair is used.
+- **Stage B (CIAI).** Training continues on pairs from the Multi-Illumination Dataset (MID), where every scene is photographed 25 times with a flash bounced in a different direction, with the pseudo-ground-truth albedo from [MIDIntrinsics](https://github.com/compphoto/MIDIntrinsics). The first frame of a pair is white-balanced and supervised; the second is left raw, so it keeps its own light colour. Two losses tie the pair:
   - `L_inv`: masked L1 between the two albedos.
   - `L_expl`: the log luminance ratio of the two shadings must equal that of the two images, which rules out a flat albedo.
 
-The frozen encoder tends to wash out the albedo colour, so the model also has a **colour path**: an RGB skip into the albedo head and a chroma loss on albedo. This is a design choice of the model, not part of CIAI, and the skip can pass the light colour of the input into the albedo as a colour cast.
+The model also has a **colour path** (an RGB skip into the albedo head and a chroma loss), which keeps the albedo colour that the frozen encoder tends to wash out. It is a design choice of the model, not part of CIAI.
 
 ## Results
 
-All numbers use the 30 held-out MID scenes with raw input. The ablation starts from one shared checkpoint with the same data and steps.
+All MID numbers use the 30 held-out scenes with raw input. The ablation starts from one shared checkpoint with the same data and steps. The figures show the same model trained for 20k further iterations.
 
 | CIAI | Colour path | C<sub>mat</sub> &darr; | Cast<sub>rel</sub> &darr; | MAW &Delta;E &darr; | ARAP raw LMSE &darr; |
 |:---:|:---:|:---:|:---:|:---:|:---:|
@@ -73,25 +80,31 @@ All numbers use the 30 held-out MID scenes with raw input. The ablation starts f
 
 **Table 2.** Comparison with other methods. \* Value reported in the CD-IID paper.
 
+<div align="center">
+<img src="documents/thesis/images/readme/ciai-qualitative.jpg" width="100%" alt="Grid comparing input, pseudo-ground-truth albedo and predictions from seven methods across three flash directions of one scene, with two regions tracked by coloured boxes."/>
+</div>
+
+**Figure 4.** One held-out scene, three flash directions, seven methods. The red and blue boxes track the same two regions in every panel, so any change between rows comes from the model.
+
 1. **CIAI improves luminance stability.** C<sub>mat</sub> drops by 28% and 39% in the two matched pairs. Our model is more stable than CD-IID, both Marigold variants and Ordinal Shading, level with CRefNet, and behind RGB&rarr;X.
 2. **CIAI improves accuracy where the input carries its lighting.** On raw ARAP, albedo LMSE drops by 14% and 7%.
-3. **CIAI does not improve measured colour.** MAW &Delta;E does not improve, and CD-IID is better on all colour measures.
+3. **CIAI does not improve measured colour.** Hue drift improves by only 6% and 4%, MAW &Delta;E does not improve, and CD-IID is better on all colour measures.
 
 ## Limitations
 
-- **Colour is not learned.** The explanation loss uses luminance only, and the flash in MID is white, so the light colour changes only slightly between frames (median chromaticity gap 0.030). Therefore, hue drift still grows with the light colour, as in a grey-shading model.
-- **ARAP numbers are provisional.** ARAP stores its ground-truth albedo in three encodings, and the current mask does not handle all of them. They will be regenerated with `tests/eval/arap_preprocess.py`.
-- **Figures and weights.** Some qualitative figures were made with a later checkpoint of the same model, and pretrained weights are not in this repository (about 1.4 GB each). Please open an issue if you would like access.
+- **Colour is not learned.** The explanation loss uses luminance only, and the flash in MID is white, so the light colour changes only slightly between frames (median chromaticity gap 0.030). Hue drift therefore still grows with the light colour, nearly as much as in a grey-shading model.
+- **Reflective surfaces and hard shadows.** A mirror cannot be written as albedo times shading, and a sharp cast shadow can still be read as a material edge.
+- **ARAP is a within-study comparison.** ARAP stores its ground-truth albedo in three encodings, and one fixed mask is applied to every model, so the ARAP numbers compare models with each other, not with published ARAP results.
 
-## Next steps
+## Future work
 
-The next stage targets colour, which the current model does not learn. It is planned and not trained yet.
+The next stage targets colour.
 
 <div align="center">
-<img src="documents/thesis/images/readme/ciai-pipeline.jpg" width="100%" alt="Planned pipeline: two photographs of one view under different light colours go through a shared model with three outputs (albedo, grey shading, shading chroma), tied by three losses."/>
+<img src="documents/thesis/images/readme/ciai-pipeline.jpg" width="100%" alt="Future pipeline: two photographs of one view under different light colours go through a shared model with three outputs (albedo, grey shading, shading chroma), tied by three losses."/>
 </div>
 
-**Figure 3.** Planned pipeline. The output panels are ground-truth targets from a rendered 3D-Front scene (S = I / A), not predictions.
+**Figure 5.** Future pipeline. The output panels are ground-truth targets from a rendered 3D-Front scene (S = I / A), not predictions.
 
 1. **Cross-architecture test.** Train with and without CIAI on a CNN, a fine-tuned ViT and a single-step diffusion model, with the same data and three seeds.
 2. **Model.** Split the shading into a grey part and a chroma part, I = A * (S<sub>lum</sub> * C) + R (`src/models/trifactor_net.py`).
@@ -105,10 +118,13 @@ git clone https://github.com/tmkhang1999/CIAI.git && cd CIAI
 conda create -n ciai python=3.10 -y && conda activate ciai
 pip install -r requirements.txt
 python tests/smoke_test.py          # one training step per config on random data, CPU, about 1 min
+```
 
-# Decompose one photograph (--device also accepts mps or cpu)
+Pretrained weights are not released. After training (below), decompose a photograph with your Stage B checkpoint:
+
+```bash
 python tests/infer/infer_wild.py --image your_photo.jpg \
-    --checkpoint checkpoints/ciai/checkpoint_iter_40000.pth --device cuda --max_size 1280
+    --checkpoint checkpoints/ciai/checkpoint_iter_40000.pth --device cuda --max_size 1280   # or mps / cpu
 ```
 
 ## Training
@@ -120,12 +136,12 @@ bash scripts/train.sh --config stage_a --cuda 0                  # Stage A, stop
 bash scripts/train.sh --config ciai --cuda 0 --skip-optimizer   # Stage B (CIAI) from the 19k checkpoint
 ```
 
-`ablation_none`, `ablation_ciai`, `ablation_colour` and `ciai` are the four ablation rows, and `ciai` is the reported model. Training needs a GPU with at least 12 GB, because each step runs two forward passes. The CIAI losses are in `src/losses/ciai.py` and take plain tensors, so any model that outputs an albedo and a shading can use them.
+`ablation_none`, `ablation_ciai`, `ablation_colour` and `ciai` are the four ablation rows, and `ciai` is the reported model. All runs used one 24 GB GPU; a CIAI step runs two forward passes. The CIAI losses are in `src/losses/ciai.py` and take plain tensors, so any model that outputs an albedo and a shading can use them.
 
 ## Evaluation
 
 ```bash
-CKPT=checkpoints/ciai/checkpoint_iter_40000.pth
+CKPT=checkpoints/ciai/checkpoint_iter_40000.pth   # your Stage B checkpoint
 python tests/eval/eval_mid_constancy.py --ckpts $CKPT --mid-root ../datasets/MIDIntrinsics --split test --save-json
 python tests/eval/eval_maw.py --ckpts $CKPT --save-json
 python tests/eval/eval_arap.py --checkpoint $CKPT --constancy
@@ -133,17 +149,17 @@ python tests/eval/eval_arap.py --checkpoint $CKPT --constancy
 
 ## Related work
 
-CIAI follows the idea of Siamese representation learning and multi-view consistency in 3D reconstruction: two views of one thing should share one property. Paired-illumination training for IID was proposed before, for example from time-lapse sequences (BigTime, Li and Snavely, 2018) and from multi-illumination pairs (Lettry et al., 2018; Ma et al., 2018; Kinoshita and Kiya, 2021). CIAI differs in that it is a second training stage on top of supervised synthetic training in a modern feed-forward model, it uses raw real photographs with a pseudo-ground-truth albedo, and it reports stability next to accuracy. CD-IID (Careaga and Aksoy, 2024) predicts the shading colour in a separate stage, which is the direction of our next step.
+CIAI follows Siamese representation learning and multi-view consistency: two views of one thing should share one property. Paired-illumination training for IID was proposed before, from time-lapse sequences (BigTime, Li and Snavely, 2018) and multi-illumination pairs (Lettry et al., 2018; Ma et al., 2018; Kinoshita and Kiya, 2022). CIAI differs in that it is a second training stage on top of supervised synthetic training in a modern feed-forward model, on raw real photographs with a pseudo-ground-truth albedo. CD-IID (Careaga and Aksoy, 2024) predicts the shading colour in a separate stage, which is the direction of our future work.
 
 ## Citation
 
 ```bibtex
 @misc{tran2026ciai,
-  title  = {Cross-Illumination Albedo Invariance: Luminance-Stable Intrinsic
-            Decomposition from Real Multi-Illumination Photographs},
+  title  = {Luminance Constancy in Intrinsic Image Decomposition via
+            Cross-Illumination Albedo Invariance ({CIAI})},
   author = {Tran, Minh Khang},
   year   = {2026},
-  note   = {Project report, revised from the author's MSc thesis (Erasmus Mundus
+  note   = {Project report based on the author's MSc thesis (Erasmus Mundus
             Joint Master in Computational Colour and Spectral Imaging, NTNU)},
   url    = {https://github.com/tmkhang1999/CIAI}
 }

@@ -5,11 +5,11 @@ WHY
 Cast_rel is reported on MID, but MID's illuminants are one white flash bounced in 25
 directions. What colour variation survives is bounce off coloured surfaces, and it is small.
 
-Measured here from the gray probes (the direct measurement of the light):
+Measured here from the gray probes (the direct measurement of the light), over all 25
+flash directions of the 30 test scenes (the frames eval_mid_constancy.py scores):
 
     median pairwise chromaticity gap  0.030
     fraction of pairs >= 0.08          14%
-    per-scene medians span            0.019 - 0.115
 
 So a scene-averaged Cast_rel is an average over a corpus that barely exercises the
 axis it scores. This script splits the existing per-scene results by per-scene
@@ -39,14 +39,19 @@ os.environ.setdefault('OPENCV_IO_ENABLE_OPENEXR', '1')
 import cv2  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-PER_SCENE = os.path.join(ROOT, 'documents', 'thesis', 'data', 'mid_per_scene.json')
-MID_TEST = os.path.join(ROOT, '..', 'datasets', 'MIDIntrinsics', 'test')
+PER_SCENE = os.path.join(ROOT, 'documents', 'results', 'mid_per_scene.json')
+# First existing root wins: the training layout, then the raw MID test download.
+MID_TEST_CANDIDATES = [
+    os.path.join(ROOT, '..', 'datasets', 'MIDIntrinsics', 'test'),
+    os.path.join(ROOT, 'data', 'multi_illumination_test_mip2_exr'),
+]
+MID_TEST = next((p for p in MID_TEST_CANDIDATES if os.path.isdir(p)), MID_TEST_CANDIDATES[0])
 CACHE = os.path.join(ROOT, 'documents', 'results', 'mid_illuminant_gaps.json')
 
-# MID skips these flash indices (hard flash / saturated), matching
-# MIDIntrinsicDataset.skip_list. Using the same set keeps the measured
-# illuminant statistics consistent with what training and evaluation actually see.
-SKIP = {2, 3, 20, 21, 24}
+# The stability metrics are computed on all 25 frames (eval_mid_constancy.py passes
+# skip_list=()), so the illuminant gaps are measured on the same 25. Training skips
+# {2, 3, 20, 21, 24}; that set only affects which pairs the model saw, not the scoring.
+SKIP: set = set()
 VALID_IDX = [i for i in range(25) if i not in SKIP]
 
 
@@ -80,16 +85,24 @@ def measure_scene_gaps(scenes, mid_root=MID_TEST, cache=CACHE):
     if os.path.exists(cache):
         with open(cache) as f:
             d = json.load(f)
-        if all(s in d.get('per_scene', {}) for s in scenes):
-            return d['per_scene']
+        # A cache built with a different skip set would silently mix frame sets.
+        if (d.get('_skip_indices') == sorted(SKIP)
+                and all(s in d.get('per_scene', {}) for s in scenes)):
+            return d['per_scene'], d.get('pooled')
+        print(f'[info] gap cache {cache} is stale (skip set or scenes differ); re-measuring')
+    if not os.path.isdir(mid_root):
+        raise FileNotFoundError(f'MID test scenes not found; tried {MID_TEST_CANDIDATES}')
 
-    per = {}
+    per, pooled = {}, []
     for s in scenes:
         sd = os.path.join(mid_root, s)
         ch = {i: probe_chromaticity(sd, i) for i in VALID_IDX}
         ch = {i: c for i, c in ch.items() if c is not None}
         gaps = [float(np.hypot(ch[i][0] - ch[j][0], ch[i][2] - ch[j][2]))
                 for i, j in combinations(sorted(ch), 2)]
+        pooled.extend(gaps)
+        if not gaps:
+            print(f'[warn] {s}: fewer than two readable probes, scene has no gap')
         per[s] = {
             'n_illum': len(ch),
             'median_gap': float(np.median(gaps)) if gaps else None,
@@ -97,11 +110,19 @@ def measure_scene_gaps(scenes, mid_root=MID_TEST, cache=CACHE):
             'max_gap': float(max(gaps)) if gaps else None,
             'frac_ge_008': float(np.mean(np.array(gaps) >= 0.08)) if gaps else None,
         }
+    pooled_arr = np.array(pooled, dtype=float)
+    pooled_stats = {
+        'n_pairs': int(pooled_arr.size),
+        'median_gap': float(np.median(pooled_arr)) if pooled_arr.size else None,
+        'frac_ge_008': float(np.mean(pooled_arr >= 0.08)) if pooled_arr.size else None,
+    }
     os.makedirs(os.path.dirname(cache), exist_ok=True)
     with open(cache, 'w') as f:
-        json.dump({'_note': 'per-scene MID illuminant chromaticity gaps from gray probes',
-                   '_skip_indices': sorted(SKIP), 'per_scene': per}, f, indent=1)
-    return per
+        json.dump({'_note': 'per-scene MID illuminant chromaticity gaps from gray probes, '
+                            'all 25 flash directions (the evaluated frames)',
+                   '_skip_indices': sorted(SKIP), 'pooled': pooled_stats,
+                   'per_scene': per}, f, indent=1)
+    return per, pooled_stats
 
 
 def main():
@@ -116,10 +137,13 @@ def main():
         d = json.load(f)
     scenes, methods = d['scenes'], d['methods']
 
-    per = measure_scene_gaps(scenes)
+    per, pooled = measure_scene_gaps(scenes)
     gaps = np.array([per[s]['median_gap'] for s in scenes], dtype=float)
 
     print(f'MID test: {len(scenes)} scenes')
+    if pooled:
+        print(f'pooled over {pooled["n_pairs"]} frame pairs: median gap '
+              f'{pooled["median_gap"]:.4f}, {100 * pooled["frac_ge_008"]:.1f}% >= 0.08')
     print(f'per-scene median illuminant gap: min {gaps.min():.4f}  '
           f'median {np.median(gaps):.4f}  max {gaps.max():.4f}')
     print('reference: 3D-Front v1 = 0.153, 3D-Front v2 pilot = 0.123, '
@@ -155,7 +179,7 @@ def main():
     print('A rising ratio means the method degrades as the light changes colour.')
 
     payload = {
-        '_generated': '2026-09-05',
+        '_generated': '2026-11-17',
         '_script': 'tests/eval/mid_colour_stratified.py',
         '_metric': m,
         '_note': ('Per-scene MID illuminant chromaticity gap measured from gray '

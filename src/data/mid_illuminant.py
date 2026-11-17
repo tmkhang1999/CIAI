@@ -2,8 +2,8 @@
 
 MID bounces one white flash in 25 directions, so the colour difference between two
 frames of a scene comes only from light bounced off coloured surfaces, and it is small.
-Over the 30 test scenes the per-scene median pairwise chromaticity gap is 0.021
-(range 0.017 to 0.086), and 14% of all frame pairs reach 0.08.
+Over the 30 test scenes and all 25 flash directions, the median pairwise chromaticity gap
+is 0.030 and 14% of frame pairs reach 0.08 (tests/eval/mid_colour_stratified.py).
 
 `probe_chromaticity` reads one frame's illuminant colour; `gap_matrix` gives the
 pairwise gaps for a scene (cached next to it). The MID loader uses them to report each

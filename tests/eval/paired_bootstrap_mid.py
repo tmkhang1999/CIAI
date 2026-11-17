@@ -75,12 +75,40 @@ def compute(n_boot=20000, seed=0):
     return out, n, n_boot
 
 
+def marginal(n_boot=20000, seed=0):
+    """Per-method scene mean with a percentile-bootstrap 95% interval (tab:mid brackets).
+
+    Uses the same resampled scene indices as the paired test, so both tables come
+    from one bootstrap draw.
+    """
+    payload = json.loads(PER_SCENE.read_text())
+    n = len(payload['scenes'])
+    idx = np.random.default_rng(seed).integers(0, n, size=(n_boot, n))
+    out = {}
+    for name in [OURS] + BASELINES:
+        out[name] = {}
+        for key, _ in METRICS:
+            y = np.asarray(payload['methods'][name][key], float)
+            lo, hi = np.percentile(y[idx].mean(axis=1), [2.5, 97.5])
+            out[name][key] = (float(y.mean()), float(lo), float(hi))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--latex', action='store_true', help='emit LaTeX table rows')
+    ap.add_argument('--marginal', action='store_true',
+                    help='print per-method means with 95%% intervals (tab:mid)')
     ap.add_argument('--n-boot', type=int, default=20000)
     ap.add_argument('--seed', type=int, default=0)
     args = ap.parse_args()
+
+    if args.marginal:
+        for name, row in marginal(args.n_boot, args.seed).items():
+            cells = [f'{m:.3f} [{lo:.3f},{hi:.3f}]' for m, lo, hi in
+                     (row[k] for k, _ in METRICS)]
+            print(f'{name:<17s} ' + '  '.join(cells))
+        return
 
     res, n, n_boot = compute(args.n_boot, args.seed)
 

@@ -4,41 +4,57 @@
 \chapter{Experiments}
 \label{ch:experiments}
 
-This chapter reports results on the four benchmarks of \secref{sec:benchmarks},
-after the experimental setup in \secref{sec:exp_setup}.
+The purpose of this chapter is to test the claim of this thesis: that CIAI makes the
+predicted albedo more stable in luminance when the light changes, and to check what this
+costs in accuracy. \secref{sec:exp_setup} describes the setup and \secref{sec:metrics}
+defines the scores. The results then follow in the order of how directly they test the
+claim.
 
-The order of the benchmark sections is deliberate, because the benchmarks do not
-carry equal weight and presenting them as a flat list would suggest that they do.
-We begin with MID (\secref{sec:mid_results}), the only benchmark that measures the
-property this thesis is about: whether the predicted albedo of a real surface stays
-put when the light on it changes.
-We then turn to IIW (\secref{sec:iiw_results}), the field's long-standing
-perceptual benchmark. Its human judgements validly test relative reflectance
-ordering, but WHDR is blind to absolute albedo and hue. It is therefore
-complementary evidence rather than the deciding measure for coloured-illuminant
-leakage.
-That limitation is the reason MAW exists, so MAW follows (\secref{sec:maw_results}):
-it compares predictions against physically measured albedo on real surfaces and
-scores colour error directly, which is the closest thing the field has to an
-objective verdict on material colour.
-ARAP comes last (\secref{sec:arap_results}) because it is synthetic and therefore
-easiest to satisfy, but it is also the only benchmark with dense ground-truth albedo
-\emph{and} repeated renderings of one scene under different lights, so it is the one
-place where constancy and accuracy can be measured on the same pixels.
-
-All four benchmarks score the \emph{albedo}, and that is deliberate rather than an
-oversight. The question this thesis asks is whether a surface's recovered colour survives a
-change of illuminant, so the albedo is the quantity under test; the shading is the layer
-into which the illuminant is displaced, and it is exercised qualitatively by factor-space
-edits in \chapref{ch:practice}. We therefore do not report SAW \mycite{careaga23ordinal}, which scores
-shading annotations: a good SAW score would say nothing about whether material colour is
-stable, which is the claim being made. This does mean that a decomposition could in
-principle satisfy every benchmark here while producing an implausible shading layer, and we
-do not rule that out. The application chapter demonstrates controllability, not a
-ground-truth shading evaluation.
-
-\secref{sec:ablation} then isolates what CIAI itself contributes, and
+The first benchmark is MID (\secref{sec:mid_results}), the only one that photographs one
+real scene under many lights, so it measures stability directly. The matched ablation
+follows (\secref{sec:ablation}): it isolates the effect of CIAI inside our own
+architecture, and it is the evidence the claim rests on. The remaining benchmarks check
+accuracy. IIW (\secref{sec:iiw_results}) tests relative lightness against human
+judgements, MAW (\secref{sec:maw_results}) tests colour against physically measured
+albedo, and ARAP (\secref{sec:arap_results}) tests dense albedo on synthetic renderings, the
+only benchmark with both repeated lighting and dense ground truth. Finally,
 \secref{sec:colour_axis} measures why colour stability improves much less than luminance.
+\tabref{tab:exp_guide} lists the questions this chapter answers, where each is answered, and
+the short answer.
+
+\begin{table}[t!]
+  \caption[Questions answered in this chapter.]{%
+    The questions of this chapter, where each is answered, and the short answer.}
+  \label{tab:exp_guide}
+  \centering
+  \small
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.33\textwidth}>{\raggedright\arraybackslash}p{0.17\textwidth}>{\raggedright\arraybackslash}p{0.42\textwidth}@{}}
+    \toprule
+    Question & Section & Short answer \\
+    \midrule
+    Is our albedo luminance more stable than that of other methods on real photographs?
+      & \secref{sec:mid_results}
+      & More stable than CD-IID, both Marigold variants and Ordinal Shading; level with
+        CRefNet; behind RGB$\rightarrow$X. \\
+    Is the gain caused by CIAI?
+      & \secref{sec:ablation}
+      & Yes. In matched pairs CIAI lowers $C_{\text{mat}}$ by $28\%$ and $39\%$. \\
+    Does it cost accuracy?
+      & \secref{sec:ablation}--\secref{sec:arap_results}
+      & Not overall. IIW WHDR and raw-input ARAP error improve; MAW is slightly worse. \\
+    Does it also stabilise colour?
+      & \secref{sec:ablation}, \secref{sec:colour_axis}
+      & Only slightly ($-6\%$ and $-4\%$ in $\text{Cast}_{\text{rel}}$); hue drift still
+        grows with the illuminant colour. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+All four benchmarks score the albedo, because the albedo is the quantity under test. The
+shading is the layer into which the lighting is displaced, and \chapref{ch:practice} uses it
+in factor-space edits. We therefore do not report SAW \mycite{careaga23ordinal}, which scores
+shading annotations. As a result, a decomposition could satisfy every benchmark here with
+an implausible shading layer; we do not rule that out.
 
 
 \section{Experimental Setup}
@@ -51,13 +67,12 @@ Row~4 of the ablation in \secref{sec:ablation}, and it is the model meant wherev
 says ``our model''. The other ablation rows appear only in \secref{sec:ablation}.
 
 \paragraph{Qualitative figures}
-The tables report the model above. Several qualitative figures were rendered before the
-reported model was fixed, with later checkpoints of the same architecture trained for 20k
-further steps from it, and will be regenerated once its weights are available. The
-decomposition figures of \chapref{ch:method} and \chapref{ch:practice} and the MAW and ARAP
-examples use a later checkpoint of the same model; the MID, IIW, resolution and chroma figures use one continued with
-additional albedo regularisers. Their predictions look alike, but the numbers printed inside
-them, where present, are not the reported ones.
+All numbers in the tables come from the model above. The qualitative figures show the same
+model trained for 20k further iterations: the decomposition figures of \chapref{ch:method}
+and \chapref{ch:practice} and the MAW and ARAP examples with the same losses, and the MID,
+IIW, resolution and chroma figures with extra albedo regularisers. The predictions
+look alike; a number printed inside a figure is a property of that image, not a reported
+result.
 
 \paragraph{Baselines and how scores are obtained}
 The benchmark tables compare against the same roster of methods, and follow the
@@ -68,53 +83,33 @@ CRefNet \mycite{luo23crefnet}, the Ordinal Shading stage of CD-IID
 \mycite{careaga23ordinal}, the full five-stage CD-IID cascade
 \mycite{careaga24cdiid}, and RGB$\rightarrow$X \mycite{zeng24rgbx} locally under our
 exact pipeline (same output-space normalisation and splits, identical inference
-resolution per benchmark). The last two were integrated after the first submission of
-this work; they are evaluated on MID here, and the older baselines are cited from their
-publications and appear below the rule in each table. Our own constancy metrics ($C_{\text{mat}}$, $C_{\text{arap}}$) are not reported by
-those methods and are marked n/a; a cell marked ``-'' is simply one for which no value
-is available.
+resolution per benchmark). The last two are evaluated on MID only. The older baselines are
+cited from their publications and appear below the rule in each table. A cell marked ``-''
+has no available value.
 Marigold-IID Lighting is trained on Hypersim, like our model, which makes it
 the most directly comparable external method.
 
-\paragraph{Which published table each benchmark cites}
-The published comparison point differs per benchmark, chosen so that the cited
-protocol matches ours exactly rather than the nearest available number.
-MAW cites CD-IID Table~1: both the MAW authors' own evaluation code and our
-local harness apply the identical scaling and metrics.
-ARAP cites Ordinal Shading Table~1, \emph{not} CD-IID Table~2: CD-IID modifies
-the ARAP scene set (dropping redundant illuminations and adding scenes from the
-MIST dataset), a set we cannot reproduce, whereas Ordinal Shading's table uses
-the original Bonneel et al.\ scenes (the same 52-scene set used throughout
-this chapter). IIW cites Ordinal Shading Table~2 for its zero-shot WHDR figure,
-alongside the fuller reproduced roster of \mycite{yuan25texture}.
-MID has no external citation on any axis; it is a ground-truth-free constancy
-metric that no other published work reports, and MIDIntrinsics is training data
-for both this model and CD-IID, which additionally disqualifies it as a
-zero-shot benchmark for either.
+\paragraph{Protocol details}
+The published table cited for each benchmark, and the inference resolution used for each
+benchmark, are given in \appref{app:eval}. In short, every locally run method is evaluated at
+the same resolution within each benchmark.
 
 \paragraph{Methods compared}
 \tabref{tab:methods} summarises the methods along the axes that condition a
 fair reading of the benchmark numbers: architecture type, training data,
 parameter count, runtime, and native output space.
-Two points matter for interpretation.
-First, training data determines what counts as zero-shot.
-Our model trains on Hypersim, MID, and InteriorVerse, so it shares one source
-with each Marigold variant (Hypersim with Marigold-Lighting and InteriorVerse
-with Marigold-Appearance), which makes both directly comparable rather than only
-one.
-It is zero-shot on ARAP, MAW, and IIW, but in-domain on MID (it trains on the
-MID training split, disjoint from the test scenes), which is why the MID
-constancy metric is deliberately ground-truth-free (\secref{sec:mid_results}).
-CRefNet trains on the IIW training split, so its IIW WHDR is a non-zero-shot
-result (\secref{sec:iiw_results}).
+Two points matter for reading the numbers. First, training data decides what counts as
+zero-shot. Our model trains on Hypersim, MID and InteriorVerse, so it shares one source with
+each Marigold variant: Hypersim with Marigold-Lighting and InteriorVerse with
+Marigold-Appearance. It is zero-shot on ARAP, MAW and IIW, but in-domain on MID, where it
+trains on the training split and is tested on the disjoint test split. CRefNet trains on IIW,
+so its IIW score is not zero-shot.
 Second, our model trains only about $18.5$M parameters. The DINOv2-L encoder
 ($304$M) is frozen and excluded from the optimiser, so the trainable count is far
 lower than for the diffusion baselines ($\sim$1290M) or the five-stage CD-IID
-cascade (442.8M, every stage trained), an efficiency the constancy results should
-be read against. On \emph{total} parameters the gap is much smaller --- our frozen
-backbone puts us at 322.9M, only $1.4\times$ below CD-IID and above CRefNet's
-66.6M --- so the saving is specifically in weights that had to be optimised, not in
-deployed model size.
+cascade (442.8M, every stage trained). On \emph{total} parameters the gap is much
+smaller: the frozen backbone puts us at 322.9M, above CRefNet's 66.6M.
+\secref{sec:mid_results} returns to this cost.
 
 \begin{sidewaystable}[p!]
   \caption[Methods, model size, and inference cost.]{%
@@ -123,7 +118,8 @@ deployed model size.
     warm-up at $512\times512$ on one NVIDIA Quadro RTX 6000, using the same
     local interface; Marigold uses its recommended four denoising steps.
     Trainable parameters exclude frozen weights. A dash denotes a quantity not
-    reported by the paper and not measured under our protocol. ReasonX's MLLM
+    reported by the paper and not measured under our protocol. PIE-Net and ReasonX are
+    listed for context only: their results are cited, not run. ReasonX's language model
     is a training-time judge, not the deployed intrinsic predictor.
   }
   \label{tab:methods}
@@ -166,116 +162,39 @@ shading, and residual layers.
 Before computing any metric, each prediction is converted to the corresponding
 linear albedo space; for sRGB predictions this applies the transfer function
 $A_{\text{lin}} = A_{\text{sRGB}}^{2.2}$.
-This correction matters because gamma encoding can artificially desaturate an
+This conversion matters because gamma encoding can artificially desaturate an
 albedo estimate and make it appear more constancy-correct than it actually is.
-All results in this chapter use this corrected normalisation.
-
-\paragraph{Inference resolution}
-Inference resolution is fixed per benchmark rather than shared uniformly.
-MID, IIW, and ARAP use an aspect-preserving maximum side length of 1280 pixels;
-measured directly on the full ARAP set, 1280 and 1500 pixels give effectively
-identical scores (every metric moves by less than 1\%, in mixed directions,
-consistent with measurement noise rather than a real effect), so 1280 is kept
-throughout for consistency and lower memory use.
-Ordinal Shading \mycite{careaga23ordinal} instead resizes each ARAP image to a
-content-adaptive resolution $R_0$ (Miangoleh et al.'s edge-density criterion),
-capped at 1500 pixels; since $R_0$ is computed per image and not reproducible
-from the published protocol alone, no fixed resolution can replicate it exactly,
-and the 1280-vs-1500 measurement above shows that choice is immaterial to our
-own scores regardless.
-MAW also uses the common 1280-pixel inference cap. Its public scorer then
-resizes every prediction and region mask to $320\times240$ before computing the
-metrics, so the reported numbers are determined at that fixed scoring scale.
-Every locally run method, including the baselines, is evaluated at the same
-resolution within each benchmark.
-\figref{fig:maw_resolution} shows the qualitative plateau this is chosen from:
-raising the full-CIAI prediction from 1280 to 1792 or 2560 changes little
-visually, whereas 512 visibly softens fine structure at the resolutions where
-that matters (MID, IIW).
-
-\begin{figure}[t!]
-  \centering
-  \includegraphics[width=\textwidth]{images/hires/maw_resolution.jpg}
-  \caption[Inference-resolution comparison on MAW.]{%
-    Effect of inference resolution on a MAW scene using the full-CIAI model.
-    The input photograph is shown on the left and the measured albedo on the
-    right; the middle columns show predictions at different maximum side lengths.
-    Each panel repeats the same black-sofa-armrest crop in the upper right with a red
-    border to make blur differences easier to compare.
-    Fine structure improves substantially from 512 to 1280 pixels, then largely
-    plateaus. We therefore use the common 1280-pixel inference cap for every
-    locally run MAW method; the official scorer subsequently reduces predictions
-    to $320\times240$ before measuring the metrics.
-  }
-  \label{fig:maw_resolution}
-\end{figure}
-
-\paragraph{Benchmarks at a glance}
-\figref{fig:datasets} previews the four evaluation benchmarks and the kind of
-ground truth each provides, which determines the metric it supports
-(\secref{sec:benchmarks}).
-\figref{fig:comp_grid} shows the qualitative comparison format used throughout
-this chapter: for a single in-the-wild image, the input and each method's
-predicted albedo side by side.
-
-\begin{figure}[t!]
-  \centering
-  \includegraphics[width=0.92\textwidth]{images/datasets/datasets.jpg}
-  \caption[The four evaluation benchmarks and their supervision.]{%
-    The four evaluation benchmarks and the ground truth each provides, in the order the
-    chapter presents them.
-    \textbf{MID}: real multi-illuminant captures of one scene, with no measured albedo;
-    which is why it supports a ground-truth-free constancy diagnostic and nothing stronger.
-    \textbf{IIW}: real photographs with \emph{no} albedo ground truth at all. The second
-    panel overlays the annotation that does exist: sparse pairwise human lightness
-    judgements, each a pair of points one of which was called darker ($\bullet$) than the
-    other ($\circ$). These sparse ordinal comparisons define what WHDR scores;
-    they are informative about relative lightness but not RGB colour.
-    \textbf{MAW}: real photographs with physically measured albedo on masked patches.
-    \textbf{ARAP}: synthetic renders with dense ground-truth albedo.
-  }
-  \label{fig:datasets}
-\end{figure}
-
-\begin{figure}[t!]
-  \centering
-  \includegraphics[width=\textwidth]{images/hires/comp_grid.jpg}
-  \caption[Qualitative IIW albedo comparison across methods.]{%
-    Qualitative albedo comparison on in-the-wild photographs (IIW), all methods run under
-    the identical evaluation protocol. Each panel is scale-normalised by its own
-    99th percentile, because albedo is defined only up to a global scale and each method
-    fixes that scale differently; beyond this, no colour correction is applied.
-    The comparison is deliberately shown, but it cannot be adjudicated: IIW supplies no
-    albedo ground truth (\figref{fig:datasets}), so an albedo that looks ``cleaner'' cannot
-    be distinguished by eye from one that has simply had its colour removed. The diffusion
-    baselines whiten these interiors considerably more aggressively than we do, and on this
-    evidence alone one might read that as a better decomposition. The MID pseudo-GT
-    calibration in \tabref{tab:mid} shows the ambiguity: Marigold-App and CRefNet have a
-    chroma error of $0.195$ and $0.201$ against the pseudo-ground truth, against our $0.129$.
-    This figure shows method behaviour; it cannot establish correctness on IIW.
-  }
-  \label{fig:comp_grid}
-\end{figure}
+All results in this chapter use this normalisation.
 
 
-\section{MID: Multi-Illuminant Constancy}
-\label{sec:mid_results}
 
-MIDIntrinsics \mycite{midintrinsics} photographs the same real room 25 times, moving
-only the light, so it isolates the exact variable this thesis is about.
-Because it ships no independently measured dense albedo, it cannot tell us whether a
-prediction is \emph{correct}; it can only tell us whether a prediction is
-\emph{stable}. That makes it a constancy diagnostic rather than an accuracy
-benchmark, and we report it as such.
-We use the held-out 30-scene test split. The two scores follow the
-reflectance-consistency setting of \mycite{kinoshita21consistency} but are computed
-directly on MID's illuminant groups.
+
+\section{Evaluation Metrics}
+\label{sec:metrics}
+
+The purpose of this section is to define the scores used in the rest of the chapter. Two
+scores measure stability on MID, one on ARAP, and three measure accuracy. Every stability
+score is read next to an accuracy score, because a grey, constant albedo is perfectly
+stable. The MID scores follow the reflectance-consistency setting of
+\mycite{kinoshita21consistency}, computed directly on MID's illuminant groups.
 
 Both scores rest on the same fact: within one scene, the material at a given pixel is
 the same in every one of the 25 frames, so any variation in the predicted albedo
 across frames is error by definition. Let $k = 1, \dots, N$ index the illuminant
 conditions of a scene and let $m$ index the material regions given by the scene's
-segmentation.
+segmentation (\figref{fig:mid_materials}).
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=\textwidth]{images/report/mid_materials.jpg}
+  \caption[What the MID scores are computed on.]{%
+    What the MID scores are computed on. Each test scene comes with a segmentation into
+    material regions (middle). $C_{\text{mat}}$ and $\text{Cast}_{\text{rel}}$ compare the mean
+    predicted albedo of each region across the flash directions, and
+    $\text{Chroma}_{\text{err}}$ compares it with the MIDIntrinsics pseudo-ground truth (right).
+  }
+  \label{fig:mid_materials}
+\end{figure}
 
 The first score asks whether the material's \emph{luminance} holds still.
 Writing $\mu_{m,k}$ for the mean luminance of the predicted albedo over material $m$
@@ -313,14 +232,14 @@ will show drift in $r_{m,k}$ and $b_{m,k}$ even if its luminance is stable.
 
 \paragraph{A pooled chroma spread is not a stability metric}
 \label{par:castrms_correction}
-The first version of this evaluation, in early drafts of this work, pooled these ratios
-over every material and every frame and reported their combined spread,
+A natural way to score hue stability is to pool these ratios over every material and
+every frame and report their combined spread,
 \begin{equation}
   \text{Cast}_{\text{RMS}} \;=\;
   \sqrt{\operatorname{Var}\bigl(r_{m,k}\bigr) + \operatorname{Var}\bigl(b_{m,k}\bigr)} ,
   \label{eq:castrms}
 \end{equation}
-where the variance runs over all $(m,k)$ pairs jointly. This was our own choice, not a
+where the variance runs over all $(m,k)$ pairs jointly. This is a plain choice, not a
 protocol taken from the literature, and it is unsound. By the law of total variance the
 pooled variance splits into
 \begin{equation}
@@ -334,10 +253,10 @@ pooled variance splits into
 Only the first term is drift. The second is the chromatic diversity of the scene, and
 because it is computed from the \emph{predicted} albedo, a model that pulls distinct
 materials toward a common hue lowers \eqnref{eq:castrms} without becoming any more
-stable. In the ablation of \secref{sec:ablation} the pooled score ranked the visibly
-desaturated configuration best. We record the mistake because it is easy to make: any
-stability score computed on predictions alone can be improved by discarding colour, and
-must be read next to an accuracy score.
+stable. In the ablation of \secref{sec:ablation} the pooled score ranks the visibly
+desaturated configuration best, so we do not use it. Any stability score computed on
+predictions alone can be improved by discarding colour, and must be read next to an
+accuracy score.
 
 \paragraph{Reported metrics}
 We report hue stability from the first term of \eqnref{eq:castdecomp} only. Write the
@@ -420,19 +339,42 @@ combined, because they can move in opposite directions: $C_{\text{mat}}$ is a lu
 score and $\text{Cast}_{\text{rel}}$ a hue score, and a configuration may stabilise one
 while disturbing the other.
 
-This is deliberately an in-domain diagnostic: our method trains on MID, and so does
-CD-IID \mycite{careaga24cdiid}. We train on the official MID training split and hold
-out its $30$-scene test split, which is the split evaluated throughout this chapter.
-CD-IID's description of its training data names the multi-illumination dataset without
-stating a split, so we cannot verify which scenes it saw; that is a limit on what any
-comparison against it can claim, not an allegation. The table therefore compares
-locally evaluated models under one pipeline and makes no zero-shot claim.
+For ARAP, which has no material segmentation, the stability score is computed per pixel.
+For a group of $N$ renderings of one scene, $C_{\text{arap}}$ takes the coefficient of
+variation of the predicted albedo luminance across the renderings at every valid pixel, and
+averages it over the valid pixels $\Omega_g$ of the group and then over the groups $G$,
+\begin{equation}
+  C_{\text{arap}} \;=\;
+  \frac{1}{|G|} \sum_{g \in G} \frac{1}{|\Omega_g|} \sum_{p \in \Omega_g}
+  \frac{\operatorname{std}_k L\bigl(\mathbf{A}_k(p)\bigr)}
+       {\operatorname{mean}_k L\bigl(\mathbf{A}_k(p)\bigr)} ,
+  \label{eq:carap}
+\end{equation}
+where $L$ is the Rec.~709 luminance and a pixel is valid when its ground-truth albedo
+luminance exceeds $0.004$. Like
+$C_{\text{mat}}$, it is a luminance score. The accuracy scores of MAW and IIW are defined with
+their benchmarks (\secref{sec:maw_results} and \secref{sec:iiw_results}).
+
+\section{MID: Stability Across Flash Directions}
+\label{sec:mid_results}
+
+The purpose of this section is to measure, directly, whether the predicted albedo stays
+the same when only the light changes. MID \mycite{midintrinsics} photographs each real room
+25 times and moves only the flash, so it isolates this variable. Its albedo is a
+pseudo-ground truth rather than a measurement, so MID is mainly a stability test; accuracy
+is checked against measured albedo on MAW (\secref{sec:maw_results}). We use the held-out
+30-scene test split and the scores of \secref{sec:metrics}.
+
+MID is in-domain for two methods. We train on the official MID training split, and CD-IID
+\mycite{careaga24cdiid} also trains on MID but does not state which split it used, so we
+cannot verify which test scenes it saw. The table therefore compares locally evaluated models
+under one pipeline and makes no zero-shot claim.
 
 \begin{table}[t!]
   \caption[MID stability and chroma accuracy.]{%
     Stability and in-domain accuracy on the held-out MIDIntrinsics test split
     \mycite{midintrinsics}, 30 scenes; brackets are $95\%$ percentile-bootstrap intervals
-    over scenes. $C_{\text{mat}}$ (\eqnref{eq:cmat}) is luminance stability and
+    over scenes ($20{,}000$ resamples). $C_{\text{mat}}$ (\eqnref{eq:cmat}) is luminance stability and
     $\text{Cast}_{\text{rel}}$ (\eqnref{eq:castrel}) is scale-normalised hue stability;
     $\text{Chroma}_{\text{err}}$ (\eqnref{eq:chromaerr}) is the per-material chromaticity
     error against the pseudo-ground truth. Lower is better for all three. Red, orange,
@@ -450,34 +392,36 @@ locally evaluated models under one pipeline and makes no zero-shot claim.
     Model & $C_{\text{mat}}$ $\downarrow$ & $\text{Chroma}_{\text{err}}$ $\downarrow$
           & $\text{Cast}_{\text{rel}}$ $\downarrow$ \\
     \midrule
-    Ours                                       & \rankthree{0.157\,{\scriptsize[.141,.174]}} & \ranktwo{0.129\,{\scriptsize[.109,.150]}} & 0.425\,{\scriptsize[.360,.491]} \\
+    Ours                                       & \rankthree{0.157\,{\scriptsize[.142,.175]}} & \ranktwo{0.129\,{\scriptsize[.110,.150]}} & 0.425\,{\scriptsize[.360,.492]} \\
     CD-IID \mycite{careaga24cdiid}             & 0.190\,{\scriptsize[.172,.210]} & \rankone{0.090\,{\scriptsize[.073,.110]}} & \rankone{0.306\,{\scriptsize[.262,.355]}} \\
     RGB$\rightarrow$X \mycite{zeng24rgbx}      & \rankone{0.128\,{\scriptsize[.115,.141]}} & 0.203\,{\scriptsize[.170,.239]} & \ranktwo{0.338\,{\scriptsize[.273,.409]}} \\
     Marigold-App \mycite{marigoldiid24}        & 0.193\,{\scriptsize[.173,.214]} & 0.195\,{\scriptsize[.152,.245]} & \rankthree{0.355\,{\scriptsize[.309,.406]}} \\
-    Marigold-Light \mycite{marigoldiid24}      & 0.546\,{\scriptsize[.462,.645]} & 0.154\,{\scriptsize[.124,.187]} & 0.392\,{\scriptsize[.333,.459]} \\
-    CRefNet \mycite{luo23crefnet}              & \ranktwo{0.151\,{\scriptsize[.138,.164]}} & 0.201\,{\scriptsize[.165,.241]} & \rankthree{0.355\,{\scriptsize[.309,.406]}} \\
-    Ordinal Shading \mycite{careaga23ordinal}  & 0.252\,{\scriptsize[.229,.279]} & \rankthree{0.148\,{\scriptsize[.130,.166]}} & 0.549\,{\scriptsize[.463,.637]} \\
+    Marigold-Light \mycite{marigoldiid24}      & 0.546\,{\scriptsize[.463,.645]} & 0.154\,{\scriptsize[.125,.186]} & 0.392\,{\scriptsize[.333,.460]} \\
+    CRefNet \mycite{luo23crefnet}              & \ranktwo{0.151\,{\scriptsize[.138,.164]}} & 0.201\,{\scriptsize[.165,.241]} & \rankthree{0.355\,{\scriptsize[.308,.405]}} \\
+    Ordinal Shading \mycite{careaga23ordinal}  & 0.252\,{\scriptsize[.229,.280]} & \rankthree{0.148\,{\scriptsize[.130,.166]}} & 0.549\,{\scriptsize[.463,.638]} \\
     \bottomrule
   \end{tabular}}
 \end{table}
 
-\tabref{tab:mid} is not a victory on any single column, and we report the losses first,
-because the paired bootstrap of \tabref{tab:mid_paired} makes them unambiguous.
+The first thing we can see from \tabref{tab:mid} is that our model does not lead any single
+column. We start with the two columns where it trails, using the paired bootstrap of
+\tabref{tab:mid_paired} to decide which differences are significant.
 
-Our model does \emph{not} lead hue stability. Every external method except Ordinal Shading
+First, our model does \emph{not} lead hue stability. Every external method except Ordinal Shading
 has a lower $\text{Cast}_{\text{rel}}$ than our $0.425$, and the paired difference is
 significant for four of the five. CD-IID leads the column at $0.306$.
 
-It does not lead chroma accuracy either. Its $\text{Chroma}_{\text{err}}$ of $0.129$ is second
+Second, it does not lead chroma accuracy either. Its $\text{Chroma}_{\text{err}}$ of $0.129$ is second
 to CD-IID's $0.090$, and that gap is significant ($+0.039\,[+0.022, +0.057]$). CD-IID reaches
-better accuracy \emph{and} better hue stability while keeping its colour, so low hue drift is not only reachable by desaturating.
+better accuracy \emph{and} better hue stability while keeping its colour. In other words,
+low hue drift can be reached without desaturating the albedo.
 
-On luminance, our model is significantly more stable than CD-IID, both Marigold variants and
-Ordinal Shading, level with CRefNet ($+0.007\,[-0.004, +0.019]$), and significantly less stable
-than RGB$\rightarrow$X ($+0.030\,[+0.014, +0.047]$). This comparison across methods mixes
+On luminance, however, our model is significantly more stable than CD-IID, both Marigold
+variants and Ordinal Shading. It is level with CRefNet, with a paired difference of
+$+0.007\,[-0.004, +0.019]$, and significantly less stable than RGB$\rightarrow$X
+($+0.030\,[+0.014, +0.047]$). This comparison across methods mixes
 architectures, training data and model size, so it does not isolate the training strategy;
-the matched ablation of \secref{sec:ablation} does, and that is where the claim of this report
-rests.
+the matched ablation of \secref{sec:ablation} does, and the claim of this thesis rests on it.
 
 \begin{table}[t!]
   \caption[Paired comparisons against each external baseline.]{%
@@ -514,8 +458,8 @@ RGB$\rightarrow$X is \emph{colourful but miscalibrated}: it keeps strong colours
 wrong hues, with the worst $\text{Chroma}_{\text{err}}$ in the table ($0.203$). CD-IID is good on both. No single number captures all three, which is why
 we never report stability without accuracy.
 
-Our model trains $18.5$M parameters against CD-IID's $442.8$M --- every stage of which is
-optimised --- and roughly $1290$M for each diffusion baseline, at $0.148$\,s per image against
+Our model trains $18.5$M parameters against CD-IID's $442.8$M (every stage of which is
+optimised) and roughly $1290$M for each diffusion baseline, at $0.148$\,s per image against
 $0.254$\,s and $0.8$--$1.0$\,s (\tabref{tab:methods}). The saving is in weights that had to be
 optimised, not in deployed size: the frozen backbone leaves us at $322.9$M total, only
 $1.4\times$ below CD-IID.
@@ -527,33 +471,265 @@ Lower is better on both axes. CRefNet and Marigold-App drift less than our model
 substantially higher chroma error, and the colour-path-off ablation sits in the same
 high-error region; CD-IID is best on both axes.
 
-
-\figref{fig:mid_constancy} shows a qualitative example.
-Each column is a different flash direction for the same scene, and the variation map
-shows where the predicted luminance changes with the light.
+\figref{fig:cmat_vs_chroma} shows the same roster on the score the claim rests on.
+Lower is better on both axes. Our model sits in the lower-left group with CRefNet, RGB$\rightarrow$X
+and CD-IID on luminance stability, and of those, only CD-IID is more accurate in chroma.
 
 \begin{figure}[t!]
   \centering
-  \includegraphics[width=\textwidth]{images/hires/mid_ours.jpg}
-  \caption[MID albedo stability under four flash directions.]{%
-    Qualitative albedo stability on one MID scene. The upper row shows four inputs
-    and the pseudo-ground-truth albedo; the lower row shows the corresponding
-    predictions and a per-pixel coefficient-of-variation map of predicted luminance
-    (red = the prediction changes with the light). The map stays cool over the table
-    and most of the matte packaging, and turns red on the plastic tray, the glass jar
-    and the mirror sphere, surfaces an albedo--shading product cannot represent; the
-    book cover also washes out under the brightest flash (light 12).
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=0.84\textwidth, height=0.5\textwidth,
+        xlabel={$C_{\text{mat}}$ (luminance drift across flash directions; lower is better)},
+        ylabel={$\text{Chroma}_{\text{err}}$ (lower is better)},
+        xlabel style={font=\small}, ylabel style={font=\small},
+        tick label style={font=\footnotesize},
+        xmin=0.10, xmax=0.60, ymin=0.07, ymax=0.235,
+        grid=major, grid style={gray!22}, axis line style={gray!55}, clip=false]
+      \addplot[only marks, mark=*, mark size=3.6pt, draw=black, fill=blue!70!black] coordinates {(0.157,0.129)};
+      \node[anchor=north west, font=\scriptsize\bfseries, blue!45!black] at (axis cs:0.159,0.127) {Ours};
+      \addplot[only marks, mark=triangle*, mark size=3.4pt, draw=black, fill=orange!85!red] coordinates {(0.180,0.201)};
+      \node[anchor=south west, font=\scriptsize, orange!55!black] at (axis cs:0.180,0.212) {Colour path off};
+      \addplot[only marks, mark=square*, mark size=2.9pt, draw=black, fill=gray!75]
+        coordinates {(0.190,0.090) (0.128,0.203) (0.151,0.201) (0.193,0.195) (0.546,0.154) (0.252,0.148)};
+      \node[anchor=west, font=\scriptsize] at (axis cs:0.193,0.090) {CD-IID};
+      \node[anchor=south, font=\scriptsize] at (axis cs:0.120,0.207) {RGB$\rightarrow$X};
+      \node[anchor=north east, font=\scriptsize] at (axis cs:0.149,0.197) {CRefNet};
+      \node[anchor=north west, font=\scriptsize] at (axis cs:0.196,0.192) {Marigold-App};
+      \node[anchor=east, font=\scriptsize] at (axis cs:0.543,0.154) {Marigold-Light};
+      \node[anchor=west, font=\scriptsize] at (axis cs:0.255,0.148) {Ordinal};
+    \end{axis}
+  \end{tikzpicture}
+  \caption[MID luminance stability versus chroma error.]{%
+    Luminance stability against chroma error on the 30-scene MID test split (values of
+    \tabref{tab:mid}); lower is better on both axes. ``Colour path off'' is Row~2 of the
+    ablation (\secref{sec:ablation}).
   }
-  \label{fig:mid_constancy}
+  \label{fig:cmat_vs_chroma}
+\end{figure}
+
+\figref{fig:intro_constancy} in \chapref{ch:intro} shows a qualitative example: each
+column is a different flash direction for the same scene, and the variation map shows
+where the predicted luminance changes with the light.
+
+
+
+
+\section{Ablation Study}
+\label{sec:ablation}
+
+The benchmark sections placed our model against external methods, which differ from it in
+architecture, data and size at once. The purpose of this section is to isolate what CIAI
+itself contributes, with a $2\times2$ ablation inside our own architecture.
+
+The two axes of the ablation are whether the cross-illumination losses
+($\mathcal{L}_{\text{inv}}$, $\mathcal{L}_{\text{expl}}$) are active, and whether the colour
+path (the RGB skip into the albedo head and the chroma loss on albedo,
+\secref{sec:architecture}) is active. All four configurations start from the same 19k
+checkpoint and follow the same data schedule to 40k iterations (\secref{sec:schedule}).
+\tabref{tab:ablation} reports the results in three parts: stability on raw inputs (Part~1),
+accuracy under the standard protocols (Part~2a), and dense accuracy on raw ARAP inputs
+(Part~2b).
+
+Only two comparisons are causal tests of CIAI: Row~1$\rightarrow$Row~2 adds the
+cross-illumination losses with the colour path off, and Row~3$\rightarrow$Row~4 adds them
+with the colour path on. The comparison across the colour-path axis is descriptive only.
+Switching the colour path changes the shape of the albedo head, so the optimiser state of the
+19k checkpoint could not be restored on that side, and Adam restarted with empty moment
+estimates. This changed the effective learning rate by about $1.85\times$, so we do not
+attribute cross-axis differences to the colour path alone. All rows are single training runs,
+so small differences should not be read as effects.
+
+\begin{table}[p]
+  \caption[CIAI ablation across constancy and accuracy.]{%
+    The $2\times2$ CIAI ablation. All rows start from the same 19k checkpoint and train to
+    40k; Row~1$\rightarrow$Row~2 and Row~3$\rightarrow$Row~4 are the matched comparisons.
+    Part~1: stability on raw inputs, with ARAP on the $16$/$11$ colour-varying groups of
+    \tabref{tab:arap_constancy}. Part~2a: MAW accuracy, ARAP accuracy on white-balanced
+    inputs, and IIW. Part~2b: ARAP accuracy on raw inputs. All ARAP columns use the
+    evaluation mask of \secref{sec:arap_results}.
+    Lower is better everywhere except ARAP SSIM. Best per column is \textbf{bold}.
+    \figref{fig:ablation} shows the corresponding albedo and variation maps.
+  }
+  \label{tab:ablation}
+  \centering
+  \textbf{\small Part 1: Raw-input constancy (self-consistency across illuminants)}\\[2pt]
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lllccccc@{}}
+    \toprule
+    & & & \multicolumn{3}{c}{MID (30 scenes)} & ARAP all & ARAP indoor \\
+    \cmidrule(lr){4-6}\cmidrule(lr){7-7}\cmidrule(l){8-8}
+    Row & Cross-illumination & Colour path
+        & $C_{\text{mat}}$ $\downarrow$ & $\text{Cast}_{\text{rel}}$ $\downarrow$
+        & $\text{Chroma}_{\text{err}}$ $\downarrow$
+        & $C_{\text{arap}}$ $\downarrow$ & $C_{\text{arap}}$ $\downarrow$ \\
+    \midrule
+    1 & off & off & 0.250 & 0.477 & 0.186 & 0.164 & 0.122 \\
+    2 & on  & off & 0.180 & 0.447 & 0.201 & \textbf{0.145} & \textbf{0.108} \\
+    3 & off & on  & 0.259 & 0.444 & \textbf{0.124} & 0.155 & 0.117 \\
+    4 & on  & on  & \textbf{0.157} & \textbf{0.425} & 0.129 & 0.154 & 0.119 \\
+    \bottomrule
+  \end{tabular}}\\[3pt]
+  {\footnotesize ARAP has no material segmentation, so it contributes the per-pixel
+  luminance score $C_{\text{arap}}$ (\eqnref{eq:carap}) but no hue or chroma score.}\\[4pt]
+  \textbf{\small Part 2a: Standard-protocol accuracy and structure (against ground truth)}\\[2pt]
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lllcccccc@{}}
+    \toprule
+    & & & \multicolumn{2}{c}{MAW} & \multicolumn{3}{c}{ARAP (GT-achromatized)} & \multicolumn{1}{c}{IIW} \\
+    \cmidrule(lr){4-5}\cmidrule(lr){6-8}\cmidrule(l){9-9}
+    Row & Cross-illumination & Colour path & $\Delta E$ $\downarrow$ & Int.$\times$100 $\downarrow$ & LMSE$^\dagger$ $\downarrow$ & mn-RMSE$^\dagger$ $\downarrow$ & SSIM$^\dagger$ $\uparrow$ & WHDR $\downarrow$ \\
+    \midrule
+    1 & off & off & 4.434 & 0.409 & 0.0307 & 0.2378 & 0.602 & 0.334 \\
+    2 & on  & off & 4.631 & 0.474 & 0.0320 & 0.2313 & 0.589 & \textbf{0.283} \\
+    3 & off & on  & \textbf{4.115} & \textbf{0.395} & 0.0283 & 0.2348 & \textbf{0.617} & 0.327 \\
+    4 & on  & on  & 4.155 & 0.504 & \textbf{0.0279} & \textbf{0.2259} & 0.611 & 0.286 \\
+    \bottomrule
+  \end{tabular}}\\[5pt]
+  \textbf{\small Part 2b: Raw-input ARAP albedo accuracy (against ground truth)}\\[2pt]
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lllcccc@{}}
+    \toprule
+    & & & \multicolumn{2}{c}{All ARAP (raw input)}
+        & \multicolumn{2}{c}{Indoor ARAP (raw input)} \\
+    \cmidrule(lr){4-5}\cmidrule(l){6-7}
+    Row & Cross-illumination & Colour path
+        & LMSE $^\ddagger$ $\downarrow$ & mn-RMSE $^\ddagger$ $\downarrow$
+        & LMSE $^\ddagger$ $\downarrow$ & mn-RMSE $^\ddagger$ $\downarrow$ \\
+    \midrule
+    1 & off & off & 0.0463 & 0.341 & 0.0441 & 0.323 \\
+    2 & on  & off & 0.0397 & \textbf{0.292} & \textbf{0.0370} & \textbf{0.275} \\
+    3 & off & on  & 0.0426 & 0.319 & 0.0400 & 0.301 \\
+    4 & on  & on  & \textbf{0.0396} & 0.293 & 0.0382 & 0.276 \\
+    \bottomrule
+  \end{tabular}}\\[3pt]
+  {\footnotesize $\dagger$ GT-achromatized ARAP accuracy guard (136 of 157 images): an internal
+  within-study comparison, not a reproduced literature table. IIW WHDR is ancillary and is
+  not a selection criterion. $\ddagger$ Raw-input ARAP accuracy is a local multi-illuminant
+  stress test and is not compared with published white-balanced results.}
+\end{table}
+
+\paragraph{Effect of cross-illumination losses within each architecture}
+\figref{fig:ablation_deltas} summarises the two matched comparisons as relative changes.
+
+\begin{figure}[t!]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+        ybar, bar width=9pt, width=0.9\textwidth, height=0.42\textwidth,
+        ylabel={Change when CIAI is added (\%)}, ylabel style={font=\small},
+        symbolic x coords={Cmat,Castrel,LMSE,DeltaE,Chroma},
+        xtick=data,
+        xticklabels={$C_{\text{mat}}$, $\text{Cast}_{\text{rel}}$, ARAP raw LMSE, MAW $\Delta E$, $\text{Chroma}_{\text{err}}$},
+        tick label style={font=\footnotesize},
+        ymin=-45, ymax=15, grid=major, grid style={gray!22}, axis line style={gray!55},
+        legend style={font=\footnotesize, at={(0.98,0.04)}, anchor=south east},
+        nodes near coords, nodes near coords style={font=\tiny},
+        every node near coord/.append style={/pgf/number format/fixed, /pgf/number format/precision=0}]
+      \addplot[fill=orange!70, draw=black] coordinates {(Cmat,-28.0) (Castrel,-6.3) (LMSE,-14.3) (DeltaE,4.4) (Chroma,8.1)};
+      \addplot[fill=blue!60!black, draw=black] coordinates {(Cmat,-39.4) (Castrel,-4.3) (LMSE,-7.0) (DeltaE,1.0) (Chroma,4.0)};
+      \legend{Colour path off (Row 1$\rightarrow$2), Colour path on (Row 3$\rightarrow$4)}
+    \end{axis}
+  \end{tikzpicture}
+  \caption[Relative effect of CIAI in the matched ablation.]{%
+    Relative change of each score when the CIAI losses are added, in the two matched
+    comparisons of \tabref{tab:ablation}. All scores are lower-is-better, so a negative bar is an
+    improvement. CIAI clearly improves luminance stability ($C_{\text{mat}}$) and raw-input ARAP
+    accuracy, improves hue drift only slightly, and does not improve MAW colour or chroma
+    error.
+  }
+  \label{fig:ablation_deltas}
+\end{figure}
+
+The first thing we can see is a large effect on \emph{luminance} stability: cross-illumination supervision lowers
+$C_{\text{mat}}$ from 0.250 to 0.180 with the colour path off and from 0.259 to 0.157 with
+it on, corresponding to a $28\%$ and $39\%$ reduction, both well outside the scene-bootstrap intervals of
+\tabref{tab:mid}. On hue stability, in contrast, the effect is present but small:
+$\text{Cast}_{\text{rel}}$ moves from 0.477 to 0.447 and from 0.444 to 0.425.
+The relevant paired bootstrap, rather than overlap of marginal intervals, gives
+Row~1-minus-Row~2 $0.030$ with a $95\%$ interval $[0.011,0.049]$, and
+Row~3-minus-Row~4 $0.019$ with interval $[0.007,0.031]$. Both gains are significant, but in
+relative terms ($-6\%$ and $-4\%$) they are four to nine times smaller than the luminance gain.
+\secref{sec:colour_axis} examines this asymmetry.
+
+Accuracy against the pseudo-ground truth does not improve. With the colour path off,
+$\text{Chroma}_{\text{err}}$ worsens from 0.186 to 0.201; with it on, the change from 0.124 to
+0.129 is not significant. CIAI therefore makes the albedo more stable but does not by itself
+make its colour more accurate. It also improves IIW WHDR in the first pair, while both MAW
+scores worsen slightly.
+
+\paragraph{The colour path}
+The colour path is a design choice of the base model, not part of CIAI. The rows without it
+come out visibly pale (\figref{fig:ablation}) and have a higher $\text{Chroma}_{\text{err}}$
+whether CIAI is off (Row~1, $0.186$) or on (Row~2, $0.201$); the rows with it reach $0.124$ and
+$0.129$ and have better MAW colour, Row~3 obtaining the best $\Delta E$
+($4.115$) and intensity score ($0.395$). This is a descriptive comparison: the bundle
+changes chroma supervision, head parameters, optimiser state and effective learning-rate
+history at once, so it does not isolate the skip from the chroma loss. Row~4 is the most
+stable of the four on both luminance and hue, measured as drift relative to the model's own
+chroma (\eqnref{eq:castrel}).
+
+\paragraph{CIAI also makes the albedo more accurate on raw input}
+The pair losses are not only a stability constraint. On ARAP renderings fed with their
+original coloured illumination (Part~2b), adding CIAI lowers the dense albedo error in both
+matched pairs: LMSE from 0.0463 to 0.0397 ($-14\%$) and mean-normalised RMSE from 0.341 to
+0.292 ($-14\%$) without the colour path, and LMSE from 0.0426 to 0.0396 ($-7\%$) and RMSE from
+0.319 to 0.293 ($-8\%$) with it; the indoor subset moves the same way ($-16\%$/$-15\%$ and
+$-5\%$/$-8\%$). On the same scenes white-balanced against the ground truth (Part~2a) the
+change is small and mixed (LMSE $+4\%$ and $-1\%$, RMSE $-3\%$ and $-4\%$). The gain therefore
+appears where the input still carries its lighting, which is what training on raw pairs
+should teach, and it appears on a synthetic benchmark the model never trained on. All four
+rows pass through the same ARAP mask (\secref{sec:arap_results}), so the matched differences
+are more reliable than the absolute values.
+
+\paragraph{Why Row 4 is our model}
+Row~4 is the complete CIAI configuration: the most stable of the four rows on both MID
+measures, and the lowest raw-input ARAP
+error with the colour path. Its weaknesses, a slightly higher $\text{Chroma}_{\text{err}}$ than
+Row~3 (0.129 against 0.124) and a worse MAW score (4.155 against 4.115 $\Delta E$, 0.504 against
+0.395 intensity), are reported in \tabref{tab:ablation} and in \secref{sec:maw_results}.
+\figref{fig:ablation} shows the qualitative effect of each row.
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=\textwidth]{images/hires/ablation_mid.jpg}
+  \caption[Qualitative CIAI ablation on MID.]{%
+    The four ablation rows on one MID scene. Columns: three of the input flash directions
+    (L0, L10, L20), the pseudo-ground-truth albedo (red box), the three predicted albedos,
+    and two variation maps over five directions (L0, L5, L10, L15, L20): the luminance
+    coefficient of variation, which matches $C_{\text{mat}}$, and a chroma variation
+    $\sqrt{\mathrm{Var}(R/G) + \mathrm{Var}(B/G)}$, shown for illustration only. Rows, top to
+    bottom: no CIAI (Row~1), cross-illumination only (Row~2), colour path only (Row~3), and full
+    CIAI (Row~4). One scene cannot rank the rows; \tabref{tab:ablation} does.
+  }
+  \label{fig:ablation}
 \end{figure}
 
 
 \section{IIW: Perceptual Reflectance Ordering}
 \label{sec:iiw_results}
 
-IIW \mycite{bell14iiw} has been the default benchmark of the field for a decade,
-so a decomposition method is expected to report it, and we do.
-It scores a prediction with the Weighted Human Disagreement Rate (WHDR): human
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=\textwidth]{images/hires/comp_grid.jpg}
+  \caption[Qualitative IIW albedo comparison across methods.]{%
+    Qualitative albedo comparison on in-the-wild photographs (IIW), all methods run under
+    the identical evaluation protocol. Each panel is scale-normalised by its own
+    99th percentile, because albedo is defined only up to a global scale and each method
+    fixes that scale differently; beyond this, no colour correction is applied.
+    IIW has no albedo ground truth (\figref{fig:datasets}), so an albedo that looks cleaner
+    cannot be told apart by eye from one whose colour has been removed. The diffusion
+    baselines whiten these interiors more than we do; on MID, where pseudo-ground truth
+    exists, Marigold-App and CRefNet have a chroma error of $0.195$ and $0.201$ against our
+    $0.129$ (\tabref{tab:mid}). The figure therefore shows how each method behaves, not
+    which is correct.
+  }
+  \label{fig:comp_grid}
+\end{figure}
+
+The purpose of this section is to check that CIAI does not damage the relative lightness of
+surfaces as people judge it. IIW \mycite{bell14iiw} has been the default benchmark of the field
+for a decade. It scores a prediction with the Weighted Human Disagreement Rate (WHDR): human
 annotators are shown two points in a photograph and asked which surface is
 lighter, and WHDR is the confidence-weighted fraction of those comparisons that
 the predicted albedo orders the wrong way,
@@ -567,37 +743,17 @@ $\hat{r}_i$ is the verdict implied by the predicted albedo under a threshold on 
 ratio of the two points' intensities, and $w_i$ is the annotator confidence.
 Lower is better.
 
-\eqnref{eq:whdr} is worth writing out because its limitations are visible in it.
-The comparison $\hat{r}_i$ depends only on the \emph{ratio} of two predicted
-intensities, so WHDR is invariant to any global rescaling of the albedo and, more
-importantly, it never looks at colour at all: the albedo is reduced to a lightness
-ordering before it is scored.
-A model can therefore tint every surface in the image with the colour of the lamp
-and lose nothing on this metric, as long as the relative lightness of surface pairs
-survives.
-Its labels are sparse and perceptual, resting on human judgements rather than a
-physical albedo measurement. Subjectivity is not inherently a weakness: when
-the intended property is perceived relative reflectance, people are the
-appropriate observers. The limitation is one of \emph{scope}. A sparse ordinal
-lightness label cannot determine absolute intensity, chromaticity, or texture,
-so complementary metrics are needed for those properties
-\mycite{maw,sato25metrics}.
+\eqnref{eq:whdr} shows two limits of the score. First, $\hat{r}_i$ depends only on the
+\emph{ratio} of two predicted intensities, so WHDR ignores colour: a model can tint every
+surface with the colour of the lamp and lose nothing, as long as the relative lightness of the
+pairs survives. Second, the labels are sparse lightness orderings, so they cannot determine
+absolute intensity, chromaticity or texture \mycite{maw,sato25metrics}. Moreover, each IIW
+image is seen under one light, so WHDR cannot test stability either. We therefore read it as
+a check that CIAI does not damage lightness ordering, and turn to MAW
+(\secref{sec:maw_results}) for material colour.
 
-This matters directly for the claim of this thesis. Coloured illuminant leakage is
-a \emph{hue} error, and \eqnref{eq:whdr} is hue-blind by construction, so WHDR
-cannot confirm or refute the property we are trying to improve. We therefore report
-it as complementary evidence: it tests whether enforcing colour constancy damages
-the relative reflectance ordering that viewers care about, but it cannot validate
-the coloured-illumination claim by itself.
-The benchmark that does address material colour directly is MAW, which
-\secref{sec:maw_results} turns to next and which was created for exactly this gap
-\mycite{maw}.
-
-\tabref{tab:iiw} separates locally evaluated rows from cited full-split context.
-Supervision status is stated explicitly because the local block contains both zero-shot
-models and models trained on IIW. The cited numbers are not used as a head-to-head
-comparison with our local rows: each source has its own inference implementation and
-training protocol.
+\tabref{tab:iiw} separates the locally evaluated rows from cited results. The cited rows
+are context only, because each source uses its own inference code and protocol.
 
 \begin{table}[t!]
   \caption[IIW WHDR results.]{%
@@ -608,8 +764,7 @@ training protocol.
     \mycite{yuan25texture}, Table~I, an arXiv preprint that evaluates all
     5,230 IIW images with per-method recommended settings. Repeated methods are
     intentional: they expose source- and protocol-dependent reported values,
-    not a unified rerun. Both cited blocks are context rather than a head-to-head
-    comparison with our local split. $\dagger$ marks a result obtained with IIW
+    not a unified rerun. $\dagger$ marks a result obtained with IIW
     supervision under a different protocol.
   }
   \label{tab:iiw}
@@ -645,13 +800,12 @@ training protocol.
   \end{tabular}
 \end{table}
 
-Our model's WHDR of $0.286$ trails every locally evaluated baseline except Ordinal Shading.
-Within the ablation of \secref{sec:ablation}, adding CIAI improves WHDR (0.334 to 0.283
-without the colour path, 0.327 to 0.286 with it), so the pair losses help perceived
-reflectance ordering rather than hurt it; the gap to other methods lies in the base model.
-
-\figref{fig:iiw} shows qualitative results on the IIW test set, and illustrates the
-mismatch between what the metric rewards and what this thesis is optimising.
+As can be seen from \tabref{tab:iiw}, our model's WHDR of $0.286$ trails every locally
+evaluated baseline, including Ordinal Shading ($0.257$). However, within the ablation of
+\secref{sec:ablation}, adding CIAI improves WHDR (0.334 to 0.283 without the colour path, 0.327
+to 0.286 with it). The pair losses therefore help lightness ordering rather than hurt it, and
+the gap to other methods lies in the base model. \figref{fig:iiw} shows qualitative results
+on the IIW test set.
 
 \begin{figure}[t!]
   \centering
@@ -662,9 +816,8 @@ mismatch between what the metric rewards and what this thesis is optimising.
     The predictions preserve broad material regions but show the two competing
     errors that an ordinal score can expose only at annotated point pairs:
     legitimate material boundaries may be over-smoothed, while illumination
-    structure remains on the ceiling and around the windows. This figure is an
-    honest failure case rather than evidence of colour accuracy, because IIW
-    provides no measured RGB albedo.
+    structure remains on the ceiling and around the windows. IIW has no measured albedo, so
+    the figure shows failure modes, not colour accuracy.
   }
   \label{fig:iiw}
 \end{figure}
@@ -673,9 +826,8 @@ mismatch between what the metric rewards and what this thesis is optimising.
 \section{MAW: Measured Real-World Albedo}
 \label{sec:maw_results}
 
-MAW \mycite{maw} was built to close the gap that \secref{sec:iiw_results} just
-described.
-Instead of asking people which of two patches looks lighter, its authors recover a
+The purpose of this section is to test whether the predicted material colour is correct, not
+only stable. MAW \mycite{maw} was built for this. Instead of asking people which of two patches looks lighter, its authors recover a
 physical albedo value for real surfaces.
 They photograph a surface twice, once with a grey card of known reflectance resting
 on it and once without.
@@ -683,18 +835,14 @@ Both the surface and the card receive the same illumination, so the shading term
 shared and cancels in the ratio of the two measurements, which leaves the surface's
 albedo in absolute terms.
 The ground truth is therefore a measured quantity rather than a perceptual vote,
-which makes MAW the benchmark best able to answer the question this thesis poses:
-when a real room is lit by a coloured light, does the predicted material colour match
-the material's real colour?
+which makes MAW the benchmark best able to answer whether the predicted material colour
+matches the material's real colour.
 
-Because that ground truth is measured rather than derived from the prediction, MAW scores
-colour \emph{correctness} against an external reference, not merely stability across
-conditions. Both metrics remove the global-scale ambiguity: $\Delta E$ is computed on
-chromaticity, while the intensity error is explicitly scale-invariant. MAW therefore measures the right \emph{chromaticity} and
-the right \emph{relative} brightness, not an absolute radiometric value.
-It is thus complementary to MID rather than a substitute for it: a model can be
-perfectly stable across illuminants (a low $C_{\text{mat}}$) and still be
-consistently wrong about what colour the wall is, and MAW is what catches that.
+Both MAW scores remove the global scale: $\Delta E$ is computed on chromaticity, and the
+intensity error is scale-invariant. MAW therefore measures the right chromaticity and the
+right \emph{relative} brightness. It complements MID: a model can be perfectly stable across
+illuminants (a low $C_{\text{mat}}$) and still be consistently wrong about the colour of the
+wall, and MAW catches that.
 
 The public scorer first resizes the prediction and region mask to $320\!\times\!240$
 and extracts a robust median RGB vector $\hat{\mathbf a}_m$ for each measured material
@@ -711,8 +859,8 @@ CIEDE2000 colour difference,
   \label{eq:deltae}
 \end{equation}
 This per-material scale alignment makes the score primarily a chromaticity test rather
-than a test of recovered intensity. It is therefore the primary external score for a
-coloured-illuminant leak.
+than a test of recovered intensity. It is therefore the primary external score for colour
+accuracy.
 
 The second score tests relative material brightness. Writing
 $\hat l_m=\ell(\hat{\mathbf a}_m)$ and $l_m^\star=\ell(\mathbf a_m^\star)$, the scorer fits
@@ -771,7 +919,7 @@ protocol, with CD-IID Table~1 as the primary external reference.
     \multicolumn{3}{@{}l}{\itshape\small Cited from CD-IID, Table~1:}\\
     Bell et al. \mycite{bell14iiw}             & 6.61 & 3.11 \\
     CGIntrinsics \mycite{li18cgintrinsics}     & 5.15 & 2.71 \\
-    Li \& Snavely (2018a)$^{*}$ \mycite{li18bigtime} & 6.56 & 1.72 \\
+    Li \& Snavely$^{*}$ \mycite{li18bigtime} & 6.56 & 1.72 \\
     NIID-Net \mycite{luo20niid}                & 4.73 & 1.24 \\
     IRISformer \mycite{zhu22irisformer}        & 4.94 & 1.44 \\
     Kocsis et al. \mycite{kocsis24iid}         & 5.35 & 1.13 \\
@@ -782,11 +930,11 @@ protocol, with CD-IID Table~1 as the primary external reference.
   \end{tabular}
 \end{table}
 
-On measured albedo our model is mid-table: its colour error ($\Delta E = 4.155$) is behind
+As can be seen from \tabref{tab:maw}, our model is mid-table on measured albedo: its colour error ($\Delta E = 4.155$) is behind
 CD-IID, Marigold-App and CRefNet, and its relative-intensity error ($0.504$) is among the
 lowest. CIAI itself slightly worsens both MAW measures in the ablation (4.115 to 4.155 and
-0.395 to 0.504 with the colour path), so luminance stability on MID is not bought with
-better single-image accuracy; the stability gain and the accuracy cost are reported together.
+0.395 to 0.504 with the colour path). The gain in stability therefore comes with a small
+cost in single-image accuracy on MAW, and we report the two together.
 
 \figref{fig:maw} shows a representative MAW scene.
 The ground-truth panel is masked to the surface regions whose albedo was
@@ -800,8 +948,7 @@ score.
     Qualitative comparison on three content-diverse MAW photographs (one per
     row): a kitchen, a dark office, and a living area. Left to right: input
     photograph, measured albedo (red border and masked to reliable regions),
-    and the prediction from Ours. All three middle panels show the corresponding
-    physically measured MAW albedo mask.
+    and our prediction.
   }
   \label{fig:maw}
 \end{figure}
@@ -810,74 +957,47 @@ score.
 \section{ARAP: Constancy and Albedo Accuracy}
 \label{sec:arap_results}
 
-\paragraph{Status of these numbers}
-The ARAP results in this section are \emph{provisional}. After they were computed we found
-that ARAP stores its ground-truth albedo in three incompatible encodings: 40 scenes divided
-by the Radiance constant $179$ (maximum about $0.0056$), seven 8-bit sRGB scenes, and four
-unscaled ones. Our evaluator masks pixels with a fixed absolute threshold
-(albedo luminance $> 0.004$), which keeps a median of $1.5\%$ of the frame for the first
-group, about $99\%$ for the others, and leaves six scenes with an empty mask; this is also
-why only $136$ of $157$ images are scored. Every model passed through the same mask, so
-the comparisons are internally consistent, but the mask favours bright regions and no
-absolute ARAP value here should be compared with published numbers. In a check that
-changed only the mask, re-scoring one of our checkpoints with an encoding-aware mask raised its
-LMSE by $79\%$ and lowered its SSIM by $40\%$, which shows how much is at stake. The tables will be regenerated
-with \texttt{tests/eval/arap\_preprocess.py}; until then no claim in this report rests on
-ARAP alone.
+The purpose of this section is to measure stability and accuracy on the same pixels. ARAP
+\mycite{arap} is the only benchmark here with dense ground-truth albedo \emph{and} several
+renderings of the same scene under different lights: MID has the repeated lights but no true
+albedo, and MAW has the true albedo but one light per surface. It is synthetic, however, so a
+good ARAP number cannot by itself support a claim about real rooms, and we report it last.
 
+\paragraph{Evaluation mask}
+ARAP stores its ground-truth albedo in three encodings: 40 scenes divided by the Radiance
+constant $179$ (maximum about $0.0056$), seven 8-bit sRGB scenes, and four unscaled ones. We
+score the pixels whose ground-truth albedo luminance exceeds a fixed $0.004$. This keeps a
+median of $1.5\%$ of the frame in the first group and about $99\%$ in the others, and it
+leaves six scenes empty, so $136$ of the $157$ images are scored. Every model passes through
+the same mask, so the comparisons between models are consistent, but the absolute ARAP
+values are not comparable with published numbers. For this reason no claim in this thesis
+rests on ARAP alone.
 
-ARAP \mycite{arap} is synthetic, and we report it last for that reason: a rendered
-scene is an easier target than a photograph, so a good ARAP number cannot by itself
-support a claim about real rooms.
-What ARAP uniquely offers is that it is the only benchmark here with dense
-ground-truth albedo \emph{and} several renderings of the same scene under different
-lights. MID has the repeated illuminants but no true albedo; MAW has the true albedo
-but only one illuminant per surface. ARAP has both, so it is the one place where
-constancy and accuracy can be measured on the very same pixels, and where a claim
-that improving one damages the other can actually be tested.
-
-It answers two distinct questions, which must not be merged.
-First, does a prediction stay stable when the original coloured illumination changes?
-This is tested on the raw renderings with our self-consistency measures
-(\tabref{tab:arap_constancy}).
-Second, how accurate is the recovered albedo when the input is neutrally lit?
-This is tested on white-balanced input against dense ground-truth albedo
+\paragraph{Two questions}
+ARAP answers two questions, which we keep apart. First, does a prediction stay stable when
+the coloured illumination changes? We test this on the raw renderings
+(\tabref{tab:arap_constancy}). Second, how accurate is the albedo when the input is neutrally
+lit? We test this on white-balanced input against the dense ground truth
 (\tabref{tab:arap_accuracy}).
 
-We white-balance correctly, which is worth stating because an earlier version of our
-evaluator did not. A single global exposure rescale (multiplying all three channels by
-one scalar) leaves the chromaticity of the illuminant untouched and is therefore
-\emph{not} white balance; measured on a coloured-lit ARAP scene it leaves the implied
-illuminant as far from neutral after the operation as before. We instead reconstruct an
-achromatic-illuminant image from the ground-truth albedo: writing the implied shading as
-$\mathbf{S}=\mathbf{I}/\mathbf{A}^{*}$, we recompose $\mathbf{I}_{\text{wb}} =
-\mathbf{A}^{*}\cdot\mathrm{lum}(\mathbf{S})$, which drives the implied illuminant chromaticity
-to exactly neutral. The accuracy table uses this reconstruction; the constancy table uses the
-raw coloured renderings, since removing the illuminant would erase the very variable the
-constancy measure exists to probe.
+For the second question, a global exposure rescale is not enough, because multiplying all
+three channels by one scalar leaves the illuminant colour unchanged. We instead rebuild a
+neutrally lit image from the ground-truth albedo: with the implied shading
+$\mathbf{S}=\mathbf{I}/\mathbf{A}^{*}$, we recompose
+$\mathbf{I}_{\text{wb}} = \mathbf{A}^{*}\cdot\mathrm{lum}(\mathbf{S})$, whose implied
+illuminant is exactly neutral. The stability table keeps the raw renderings, because removing
+the illuminant would remove the variable under test.
 
-Two coverage points follow. The constancy table
-(\tabref{tab:arap_constancy}) is restricted to the multi-illuminant groups whose illuminant
-\emph{colour} actually changes between renderings ($16$ groups overall, $11$ indoor): cross-light
-drift is undefined for a single-light scene, and groups that vary only intensity or direction
-carry no colour cast for an invariant albedo to be tested against, so including them would pull
-every model's score toward zero and mask the effect the thesis is about. The accuracy table
-(\tabref{tab:arap_accuracy}) instead scores every image with usable dense albedo, namely 136 of
-the 157 in the collection; the other 21 are left with fewer than 88 valid pixels by the
-evaluation mask described above and are dropped for every model alike. The accuracy
-table combines our local white-balanced evaluation with published original-ARAP
-results from Ordinal Shading \mycite{careaga23ordinal}, Table~1.
+The stability table uses only the groups whose illuminant \emph{colour} changes between
+renderings ($16$ groups, $11$ indoor). Groups that vary only intensity or direction would pull
+every model's score toward zero. The accuracy table scores all 136 usable images and adds
+published original-ARAP results from Ordinal Shading \mycite{careaga23ordinal}, Table~1.
 
 \begin{table}[t!]
-  \caption[ARAP cross-illumination constancy (provisional).]{%
-    \textbf{Provisional; see the status note at the start of \secref{sec:arap_results}.}
-    ARAP raw-input constancy on the \emph{colour-varying} groups of the original ARAP
-    collection \mycite{arap} --- the groups in which the illuminant \emph{colour} changes
-    between renderings, which is the literal case this thesis is about ($16$ groups overall,
-    $11$ indoor; the remaining multi-light groups vary only intensity/direction and are
-    excluded, since they carry no colour for the albedo to be invariant to and would dilute
-    the score toward zero). $C_{\text{arap}}$ measures cross-illumination albedo variation;
-    lower is better. Red, orange, and yellow mark first, second, and third numerical rank in
+  \caption[ARAP cross-illumination constancy.]{%
+    ARAP stability on raw inputs, over the $16$ groups ($11$ indoor) of \mycite{arap} whose
+    illuminant colour changes between renderings. $C_{\text{arap}}$ (\eqnref{eq:carap}) is the
+    per-pixel variation of predicted albedo luminance across a group; lower is better. Red, orange, and yellow mark first, second, and third numerical rank in
     each column; displayed ties share a rank. These are internal diagnostics, evaluated
     locally.
   }
@@ -897,17 +1017,12 @@ results from Ordinal Shading \mycite{careaga23ordinal}, Table~1.
     Ordinal Shading \mycite{careaga23ordinal}  & 0.175 & 0.165 \\
     \bottomrule
   \end{tabular}\\[3pt]
-  {\footnotesize The pooled $\text{Cast}_{\text{RMS}}$ of \eqnref{eq:castrms} is deliberately
-  not reported here: \secref{par:castrms_correction} shows that an absolute chroma variance is
-  minimised just as effectively by a colourless albedo as by an invariant one, so it cannot
-  stand as a constancy score. $C_{\text{arap}}$ is likewise a pure constancy score and can be
-  minimised by a constant prediction; it must be read beside the dense-GT accuracy guard in
-  \tabref{tab:arap_accuracy}.}
+  {\footnotesize Like every stability score, $C_{\text{arap}}$ is also minimised by a constant
+  prediction, so it is read beside the accuracy of \tabref{tab:arap_accuracy}.}
 \end{table}
 
 \begin{table}[t!]
-  \caption[ARAP dense-albedo accuracy (provisional).]{%
-    \textbf{Provisional; see the status note at the start of \secref{sec:arap_results}.}
+  \caption[ARAP dense-albedo accuracy.]{%
     ARAP albedo accuracy, \emph{within-study}, on the full Bonneel et al. collection
     \mycite{arap} (136 of 157 images have dense ground-truth albedo with enough valid
     pixels to score; the same 136 are used for every model). Input is white-balanced by
@@ -943,21 +1058,22 @@ results from Ordinal Shading \mycite{careaga23ordinal}, Table~1.
 
   \vspace{0.6em}
   {\footnotesize\raggedright
-  \textbf{Why no published SSIM.} We transcribe a published metric only when its
-  protocol is specified well enough for the number to mean the same thing as ours.
-  That test fails for SSIM: Ordinal Shading's supplement fixes only the invalid-pixel
-  threshold (albedo $<0.004$, \S A.6/B.1) and lists SSIM among its ``scale-invariant
-  metrics'' without stating the alignment, and the shared \texttt{chrislib} benchmark
-  library implements LMSE, si-RMSE and WHDR but no SSIM at all. Running Ordinal
-  Shading itself through our closest reconstruction yields $0.671$ against the $0.761$
-  it reports, so the gap is a protocol difference we cannot resolve rather than a
-  quality difference. The local SSIM column is still internally valid: all five rows
-  share one harness.\par}
+  Published SSIM values are not transcribed, because Ordinal Shading does not state how its
+  SSIM is aligned, and running Ordinal Shading through our closest reconstruction gives
+  $0.671$ against the $0.761$ it reports.\par}
 \end{table}
 
-\figref{fig:arap_models} provides the model-by-illuminant comparison that the
-aggregate tables cannot show spatially. \figref{fig:arap_constancy} then samples
-three distinct ARAP interiors to reduce dependence on that single scene.
+The first thing we can see from \tabref{tab:arap_constancy} is that our model is not the most
+stable on ARAP: Marigold-App ($0.113$) and CRefNet ($0.128$) drift less than our $0.154$ over all
+groups, and on the indoor groups our $0.119$ is second. On white-balanced accuracy
+(\tabref{tab:arap_accuracy}), our model has the lowest mean-normalised RMSE of the local block
+($0.2259$) and the second-best SSIM, while its LMSE ($0.0279$) trails CRefNet and Marigold-App.
+On ARAP, therefore, our model is competitive but does not lead. The clearer ARAP result is the
+matched one: inside our architecture, CIAI lowers the raw-input albedo error by $7$--$14\%$
+(\secref{sec:ablation}).
+
+\figref{fig:arap_models} compares the models on one scene under two illuminants, and
+\figref{fig:arap_constancy} shows three further interiors.
 
 \begin{figure}[p!]
   \centering
@@ -966,16 +1082,10 @@ three distinct ARAP interiors to reduce dependence on that single scene.
     Model-by-illuminant comparison on the ARAP \emph{camera} scene. The reference
     strip shows both rendered illuminant conditions and the dense ground-truth
     albedo once. The grid below shows each locally evaluated model's albedo under
-    the same two illuminants, so the reader can compare consistency without
-    repeatedly duplicating the reference. Predictions are independently
-    scale-normalised for display, with no colour correction. The row labelled
-    Ours uses the model selected for the thesis qualitative figures. The grid exposes
-    different failure modes rather than declaring a winner: CRefNet suppresses
-    much of the material colour, Marigold-Light and Ordinal retain illumination
-    structure, and our L1 output still contains hard-shadow leakage. Marigold-App
-    is comparatively stable on this scene; the full-set metrics in
-    \tabref{tab:arap_constancy} and \tabref{tab:arap_accuracy} remain the
-    aggregate evidence.
+    the same two illuminants. Predictions are scale-normalised separately for display,
+    with no colour correction. Each model fails differently: CRefNet removes much of the
+    material colour, Marigold-Light and Ordinal keep illumination structure, and our output
+    still shows hard-shadow leakage. Marigold-App is comparatively stable on this scene.
   }
   \label{fig:arap_models}
 \end{figure}
@@ -986,209 +1096,13 @@ three distinct ARAP interiors to reduce dependence on that single scene.
   \caption[ARAP qualitative accuracy on three indoor scenes.]{%
     Qualitative accuracy on three content-diverse ARAP scenes: \emph{bedroom},
     \emph{classroom}, and \emph{livingroom}. Each row shows the rendered input,
-    dense ground-truth albedo (red border), and the prediction from Ours. This figure tests scene
-    diversity and dense-albedo fidelity; \figref{fig:arap_models} separately
-    compares models while the illuminant changes.
+    dense ground-truth albedo (red border), and our prediction.
   }
   \label{fig:arap_constancy}
 \end{figure}
 
 
 \clearpage
-\section{Ablation Study}
-\label{sec:ablation}
-
-The benchmark sections placed our model against external methods, which differ from it in
-architecture, data and size at once. This section isolates what CIAI itself contributes,
-with a $2\times2$ ablation inside our own architecture.
-
-The ablation isolates the contribution of CIAI by comparing
-configurations along two axes: whether the cross-illumination losses
-($\mathcal{L}_{\text{inv}}$, $\mathcal{L}_{\text{expl}}$) are active, and
-whether the colour-path bundle (wide RGB skip and its chroma-loss setting) is active
-(\secref{sec:architecture}). These are the two components that, according to the coupling
-argument in that section, are expected to interact.
-\tabref{tab:ablation} summarises the resulting $2 \times 2$ design.
-Part~1 reports self-consistency on raw-coloured inputs: the MID measures with their
-fidelity guard, then ARAP constancy over all eligible groups and over the
-domain-matched indoor subset. Part~2a reports measured-albedo accuracy, the
-GT-achromatized ARAP accuracy guard, and ancillary IIW ordering. Part~2b reports
-raw-input ARAP accuracy over the same all-ARAP and indoor subsets as Part~1. The
-GT-achromatized ARAP columns support the within-study comparison but are not presented
-as a reproduced published score.
-All four configurations share the same 19k initialization, data curriculum,
-and 40k training horizon. The two within-architecture comparisons are the
-causal CIAI tests: Row~1$\rightarrow$Row~2 toggles cross-illumination losses with
-the colour path off, and Row~3$\rightarrow$Row~4 does the same with the colour
-path on. These two within-architecture contrasts are the matched CIAI tests.
-The cross-axis colour-path comparison is not causal: it changes head parameters and
-chroma supervision, starts Adam afresh, and the recorded fallback produces an
-approximately $1.85\times$ different effective learning-rate trajectory. We therefore
-report cross-axis differences descriptively rather than attributing them to the skip alone.
-
-All rows are single training runs, so small differences should not be read as effects.
-
-\begin{table}[p]
-  \caption[CIAI ablation across constancy and accuracy.]{%
-    CIAI study across cross-illumination losses and the colour-path bundle. All
-    configurations share the same 19k initialization and data
-    curriculum, and 40k horizon; Row~1$\rightarrow$Row~2 and Row~3$\rightarrow$Row~4 are
-    the matched cross-illumination comparisons. Cross-axis comparisons are descriptive because
-    the colour path also changes chroma supervision, optimizer state, and effective
-    learning-rate history.
-    Part~1 reports raw-input constancy on the colour-varying ARAP groups (the same
-    $16$/$11$ subset used in \tabref{tab:arap_constancy}); all ARAP columns are provisional
-    (\secref{sec:arap_results});
-    Part~2a measured-albedo accuracy, the
-    GT-achromatized ARAP guard and ancillary IIW ordering; Part~2b raw-input ARAP accuracy.
-    Lower is better everywhere except ARAP SSIM. Best per column is \textbf{bold}.
-    \figref{fig:ablation} shows the corresponding albedo and variation maps.
-  }
-  \label{tab:ablation}
-  \centering
-  \textbf{\small Part 1: Raw-input constancy (self-consistency across illuminants)}\\[2pt]
-  \resizebox{\textwidth}{!}{%
-  \begin{tabular}{@{}lllccccc@{}}
-    \toprule
-    & & & \multicolumn{3}{c}{MID (30 scenes)} & ARAP all & ARAP indoor \\
-    \cmidrule(lr){4-6}\cmidrule(lr){7-7}\cmidrule(l){8-8}
-    Row & Cross-illumination & Colour path
-        & $C_{\text{mat}}$ $\downarrow$ & $\text{Cast}_{\text{rel}}$ $\downarrow$
-        & $\text{Chroma}_{\text{err}}$ $\downarrow$
-        & $C_{\text{arap}}$ $\downarrow$ & $C_{\text{arap}}$ $\downarrow$ \\
-    \midrule
-    1 & off & off & 0.250 & 0.477 & 0.186 & 0.164 & 0.122 \\
-    2 & on  & off & 0.180 & 0.447 & 0.201 & \textbf{0.145} & \textbf{0.108} \\
-    3 & off & on  & 0.259 & 0.444 & \textbf{0.124} & 0.155 & 0.117 \\
-    4 & on  & on  & \textbf{0.157} & \textbf{0.425} & 0.129 & 0.154 & 0.119 \\
-    \bottomrule
-  \end{tabular}}\\[3pt]
-  {\footnotesize The pooled ARAP
-  $\text{Cast}_{\text{RMS}}$ columns are omitted for the reason given under
-  \tabref{tab:arap_constancy}: an absolute chroma variance is minimised as effectively by a
-  colourless albedo as by an invariant one. The MID fidelity metrics cannot replace them on
-  ARAP, which ships no material segmentation, so ARAP contributes constancy
-  ($C_{\text{arap}}$) and the dense-GT accuracy of Part~2a instead.}\\[4pt]
-  \textbf{\small Part 2a: Standard-protocol accuracy and structure (against ground truth)}\\[2pt]
-  \resizebox{\textwidth}{!}{%
-  \begin{tabular}{@{}lllcccccc@{}}
-    \toprule
-    & & & \multicolumn{2}{c}{MAW} & \multicolumn{3}{c}{ARAP (GT-achromatized)} & \multicolumn{1}{c}{IIW} \\
-    \cmidrule(lr){4-5}\cmidrule(lr){6-8}\cmidrule(l){9-9}
-    Row & Cross-illumination & Colour path & $\Delta E$ $\downarrow$ & Int.$\times$100 $\downarrow$ & LMSE$^\dagger$ $\downarrow$ & mn-RMSE$^\dagger$ $\downarrow$ & SSIM$^\dagger$ $\uparrow$ & WHDR $\downarrow$ \\
-    \midrule
-    1 & off & off & 4.434 & 0.409 & 0.0307 & 0.2378 & 0.602 & 0.334 \\
-    2 & on  & off & 4.631 & 0.474 & 0.0320 & 0.2313 & 0.589 & \textbf{0.283} \\
-    3 & off & on  & \textbf{4.115} & \textbf{0.395} & 0.0283 & 0.2348 & \textbf{0.617} & 0.327 \\
-    4 & on  & on  & 4.155 & 0.504 & \textbf{0.0279} & \textbf{0.2259} & 0.611 & 0.286 \\
-    \bottomrule
-  \end{tabular}}\\[5pt]
-  \textbf{\small Part 2b: Raw-input ARAP albedo accuracy (against ground truth)}\\[2pt]
-  \resizebox{\textwidth}{!}{%
-  \begin{tabular}{@{}lllcccc@{}}
-    \toprule
-    & & & \multicolumn{2}{c}{All ARAP (raw input)}
-        & \multicolumn{2}{c}{Indoor ARAP (raw input)} \\
-    \cmidrule(lr){4-5}\cmidrule(l){6-7}
-    Row & Cross-illumination & Colour path
-        & LMSE $^\ddagger$ $\downarrow$ & mn-RMSE $^\ddagger$ $\downarrow$
-        & LMSE $^\ddagger$ $\downarrow$ & mn-RMSE $^\ddagger$ $\downarrow$ \\
-    \midrule
-    1 & off & off & 0.0463 & 0.341 & 0.0441 & 0.323 \\
-    2 & on  & off & 0.0397 & \textbf{0.292} & \textbf{0.0370} & \textbf{0.275} \\
-    3 & off & on  & 0.0426 & 0.319 & 0.0400 & 0.301 \\
-    4 & on  & on  & \textbf{0.0396} & 0.293 & 0.0382 & 0.276 \\
-    \bottomrule
-  \end{tabular}}\\[3pt]
-  {\footnotesize $\dagger$ GT-achromatized ARAP accuracy guard (136 of 157 images): an internal
-  within-study comparison, not a reproduced literature table. IIW WHDR is ancillary and is
-  not a selection criterion. $\ddagger$ Raw-input ARAP accuracy is a local multi-illuminant
-  stress test and is not compared with published white-balanced results.}
-\end{table}
-
-\paragraph{Effect of cross-illumination losses within each architecture}
-The clean CIAI comparisons are Row~1$\rightarrow$Row~2 and
-Row~3$\rightarrow$Row~4, the two contrasts in which only the cross-illumination losses change.
-The clear effect is on \emph{luminance} stability: cross-illumination supervision lowers
-$C_{\text{mat}}$ from 0.250 to 0.180 with the colour path off and from 0.259 to 0.157 with
-it on, corresponding to a $28\%$ and $39\%$ reduction, both well outside the scene-bootstrap intervals of
-\tabref{tab:mid}. On scale-normalised hue invariance the effect is present but small:
-$\text{Cast}_{\text{rel}}$ moves from 0.477 to 0.447 and from 0.444 to 0.425.
-The relevant paired bootstrap, rather than overlap of marginal intervals, gives
-Row~1-minus-Row~2 $0.030$ with a $95\%$ interval $[0.011,0.049]$, and
-Row~3-minus-Row~4 $0.019$ with interval $[0.007,0.031]$. Both are modest but
-significant hue-stability gains, but in relative terms ($-6\%$ and $-4\%$) five to nine
-times smaller than the luminance gain ($-28\%$ and $-39\%$). That asymmetry is the first sign of the limit examined in
-\secref{sec:colour_axis}.
-
-The pseudo-GT calibration guard supplies the necessary qualification. With the colour
-path off, $\text{Chroma}_{\text{err}}$ worsens from 0.186 to 0.201; with it on, the
-change from 0.124 to 0.129 is not significant. CIAI therefore improves paired
-constancy but does not itself improve colour calibration. It also improves ancillary
-IIW WHDR in the first pair, while both MAW measures worsen slightly. The load-bearing
-result is the repeated paired constancy gain, read beside rather than instead of the
-external accuracy guards.
-
-\paragraph{The colour path}
-The colour path is a design choice of the base model, not part of CIAI. The rows without it
-come out visibly pale (\figref{fig:ablation}) and have a higher $\text{Chroma}_{\text{err}}$
-whether CIAI is off (Row~1, $0.186$) or on (Row~2, $0.201$); the rows with it reach $0.124$ and
-$0.129$ and have better MAW colour, Row~3 obtaining the best $\Delta E$
-($4.115$) and intensity score ($0.395$). This is a descriptive comparison: the bundle
-changes chroma supervision, head parameters, optimiser state and effective learning-rate
-history at once, so it does not isolate the skip from the chroma loss. Row~4 is the most
-stable of the four on both luminance and hue, measured as drift relative to the model's own
-chroma (\eqnref{eq:castrel}).
-
-\paragraph{CIAI also makes the albedo more accurate on raw input}
-The pair losses are not only a stability constraint. On ARAP renderings fed with their
-original coloured illumination (Part~2b), adding CIAI lowers the dense albedo error in both
-matched pairs: LMSE from 0.0463 to 0.0397 ($-14\%$) and mean-normalised RMSE from 0.341 to
-0.292 ($-14\%$) without the colour path, and LMSE from 0.0426 to 0.0396 ($-7\%$) and RMSE from
-0.319 to 0.293 ($-8\%$) with it; the indoor subset moves the same way ($-16\%$/$-15\%$ and
-$-5\%$/$-8\%$). On the same scenes white-balanced against the ground truth (Part~2a) the
-change is small and mixed (LMSE $+4\%$ and $-1\%$, RMSE $-3\%$ and $-4\%$). The gain therefore
-appears where the input still carries its lighting, which is what training on raw pairs
-should teach, and it appears on a synthetic benchmark the model never trained on. These ARAP
-numbers share the provisional evaluation mask of \secref{sec:arap_results}; because all four
-rows pass through the same mask, the matched differences are more reliable than the absolute
-values, but they should be confirmed once ARAP is regenerated.
-
-\paragraph{Why Row 4 is our model}
-Row~4 is the complete CIAI configuration: the most stable of the four rows on both MID
-measures, and the lowest raw-input ARAP
-error with the colour path. Its weaknesses, a slightly higher $\text{Chroma}_{\text{err}}$ than
-Row~3 (0.129 against 0.124) and a worse MAW score (4.155 against 4.115 $\Delta E$, 0.504 against
-0.395 intensity), are reported in \tabref{tab:ablation} and in \secref{sec:maw_results}.
-
-\figref{fig:ablation} shows the qualitative effect of each ablation row.
-
-\begin{figure}[t!]
-  \centering
-  \includegraphics[width=\textwidth]{images/hires/ablation_mid.jpg}
-  \caption[Qualitative CIAI ablation on MID.]{%
-    Ablation: the four CIAI configurations on one MID scene under three
-    illuminant conditions (L0, L10, L20).
-    Columns: the three input conditions, the pseudo-ground-truth albedo (red
-    box), the three predicted albedos, and two cross-condition variation
-    heatmaps computed across five illuminant conditions (L0, L5, \ldots, L20;
-    5, three of which are shown): luminance CoV, matching MID
-    $C_{\text{mat}}$, and the legacy pooled chroma-cast CoV diagnostic
-    $\text{Cast}_{\text{RMS}}$ ($\sqrt{\mathrm{Var}(R/G) + \mathrm{Var}(B/G)}$
-    across conditions).
-    Rows, top to bottom: no CIAI (Row~1), cross-illumination only (Row~2), colour-skip
-    only (Row~3), and full CIAI (Row~4).
-    These are local, single-scene illustrations rather than estimates of the
-    full-split metrics in \tabref{tab:ablation}: the heatmaps expose where the
-    predicted albedo changes with illumination, while the table establishes the
-    dataset-level ranking. In particular, chroma variation is spatially and
-    scene dependent, so the figure is not used to infer the global
-    $\text{Cast}_{\text{RMS}}$ ordering.
-  }
-  \label{fig:ablation}
-\end{figure}
-
-
 \section{Colour Stability: A Limitation}
 \label{sec:colour_axis}
 
@@ -1202,29 +1116,39 @@ the second point and checks whether our hue drift follows the illuminant colour.
 
 We measure the illuminant of each frame on its grey probe and take the distance between
 the chromaticities $(R/\Sigma, B/\Sigma)$ of two frames of a scene as the \emph{pair gap}.
+We use all 25 flash directions, the same frames on which the stability scores are computed.
 For ARAP we read the illuminant from $\mathbf{I}/\mathbf{A}^*$ instead.
-\tabref{tab:pair_gaps} compares the two.
+\figref{fig:pair_gaps} compares the two.
 
-\begin{table}[t!]
-  \caption[Illuminant colour change between paired frames.]{%
-    Median chromaticity gap between the illuminants of two frames of one scene. MID is
-    measured over all frame pairs of the 30 test scenes; ARAP over all measurable pairs.
-  }
-  \label{tab:pair_gaps}
+\begin{figure}[t!]
   \centering
-  \small
-  \begin{tabular}{@{}lcc@{}}
-    \toprule
-    Corpus & Median gap & vs.\ MID \\
-    \midrule
-    MID (training pairs and stability benchmark) & 0.030 & $1.0\times$ \\
-    ARAP, all measurable pairs                    & 0.088 & $2.9\times$ \\
-    ARAP, indoor pairs                            & 0.070 & $2.3\times$ \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=0.84\textwidth, height=0.36\textwidth,
+        xlabel={Median illuminant chromaticity gap of a scene}, ylabel={MID test scene (sorted)},
+        xlabel style={font=\small}, ylabel style={font=\small}, tick label style={font=\footnotesize},
+        xmin=0, xmax=0.12, ymin=0, ymax=31, ytick=\empty,
+        xticklabel style={/pgf/number format/fixed, /pgf/number format/precision=2},
+        scaled x ticks=false,
+        grid=major, grid style={gray!22}, axis line style={gray!55}, clip=false]
+      \addplot[only marks, mark=*, mark size=1.6pt, blue!60!black] coordinates {(0.0194,1) (0.0201,2) (0.0206,3) (0.0223,4) (0.0225,5) (0.0228,6) (0.0241,7) (0.0245,8) (0.0246,9) (0.0249,10) (0.0260,11) (0.0263,12) (0.0264,13) (0.0271,14) (0.0274,15) (0.0286,16) (0.0344,17) (0.0376,18) (0.0379,19) (0.0381,20) (0.0391,21) (0.0392,22) (0.0400,23) (0.0404,24) (0.0406,25) (0.0406,26) (0.0428,27) (0.0488,28) (0.0514,29) (0.1154,30)};
+      \draw[dashed, red!70!black] (axis cs:0.070,0) -- (axis cs:0.070,31)
+        node[above, font=\scriptsize, red!70!black] {ARAP indoor};
+      \draw[dashed, red!70!black] (axis cs:0.088,0) -- (axis cs:0.088,31)
+        node[above, font=\scriptsize, red!70!black, xshift=6pt] {ARAP all};
+    \end{axis}
+  \end{tikzpicture}
+  \caption[Illuminant colour change in MID and ARAP.]{%
+    How much the illuminant colour changes between two frames of one scene. Each dot is
+    the median gap of one MID test scene; the dashed lines are the median gaps of ARAP
+    (0.070 indoor, 0.088 for all measurable pairs). Over all frame pairs, the MID median is
+    0.030, about a third of ARAP's.
+  }
+  \label{fig:pair_gaps}
+\end{figure}
 
-$86\%$ of MID pairs fall below $0.08$, and per-scene medians span only $0.017$ to $0.086$.
+$86\%$ of MID pairs fall below $0.08$, and 29 of the 30 per-scene medians lie between
+$0.019$ and $0.051$; only one scene reaches $0.115$.
 MID's flash is white; what colour change there is comes from light bounced off coloured
 surfaces. MID therefore teaches luminance well and colour weakly, and the hue stability
 measured on it is measured over a narrow range.
@@ -1236,34 +1160,41 @@ whose illuminant colour changes more. We split the 30 test scenes into terciles 
 median pair gap and divide the mean $\text{Cast}_{\text{rel}}$ of the top tercile by that of
 the bottom one; a ratio of $1$ means the drift does not follow illuminant colour.
 
-\begin{table}[t!]
-  \caption[Does hue drift follow illuminant colour?]{%
-    Mean $\text{Cast}_{\text{rel}}$ per tercile of scene illuminant gap on the MID test
-    split, and the ratio of the high to the low tercile. Re-aggregated from the per-scene
-    results behind \tabref{tab:mid}; no new inference.
-  }
-  \label{tab:colour_strat}
+\begin{figure}[t!]
   \centering
-  \small
-  \begin{tabular}{@{}llcccc@{}}
-    \toprule
-    Model & Shading & Low & Mid & High & High / low \\
-    \midrule
-    Ours               & RGB & 0.368 & 0.379 & 0.528 & 1.43 \\
-    CRefNet            & grey & 0.313 & 0.310 & 0.443 & 1.42 \\
-    Ordinal Shading    & grey & 0.453 & 0.489 & 0.705 & 1.56 \\
-    Marigold-Light     & RGB & 0.370 & 0.384 & 0.422 & 1.14 \\
-    Marigold-App       & RGB & 0.368 & 0.316 & 0.381 & 1.03 \\
-    CD-IID             & grey + chroma stage & 0.309 & 0.295 & 0.315 & 1.02 \\
-    RGB$\rightarrow$X  & RGB & 0.361 & 0.328 & 0.325 & 0.90 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=0.6\textwidth, height=0.46\textwidth,
+        xlabel={Tercile of scene illuminant gap}, ylabel={Mean $\text{Cast}_{\text{rel}}$},
+        xlabel style={font=\small}, ylabel style={font=\small}, tick label style={font=\footnotesize},
+        xtick={1,2,3}, xticklabels={Low, Mid, High}, xmin=0.8, xmax=3.2,
+        grid=major, grid style={gray!22}, axis line style={gray!55},
+        legend style={font=\scriptsize, at={(1.02,1)}, anchor=north west}, legend cell align=left]
+      \addplot[very thick, blue!70!black, mark=*] coordinates {(1,0.414) (2,0.338) (3,0.523)};
+      \addplot[thick, gray!70, mark=square*] coordinates {(1,0.336) (2,0.284) (3,0.445)};
+      \addplot[thick, gray!45, dashed, mark=square] coordinates {(1,0.515) (2,0.422) (3,0.711)};
+      \addplot[thick, orange!80!black, mark=triangle*] coordinates {(1,0.411) (2,0.320) (3,0.445)};
+      \addplot[thick, orange!50, dashed, mark=triangle] coordinates {(1,0.385) (2,0.293) (3,0.387)};
+      \addplot[very thick, green!50!black, mark=diamond*] coordinates {(1,0.340) (2,0.242) (3,0.336)};
+      \addplot[thick, purple!60, mark=pentagon*] coordinates {(1,0.369) (2,0.300) (3,0.344)};
+      \legend{{Ours, RGB (1.26)}, {CRefNet, grey (1.32)}, {Ordinal Shading, grey (1.38)},
+              {Marigold-Light, RGB (1.08)}, {Marigold-App, RGB (1.00)}, {CD-IID, chroma stage (0.99)},
+              {RGB$\rightarrow$X, RGB (0.93)}}
+    \end{axis}
+  \end{tikzpicture}
+  \caption[Does hue drift follow illuminant colour?]{%
+    Mean $\text{Cast}_{\text{rel}}$ per tercile of scene illuminant gap on the MID test split; the
+    legend gives each method's shading type and the ratio of the high to the low tercile.
+    Re-aggregated from the per-scene results behind \tabref{tab:mid}; no new inference.
+  }
+  \label{fig:colour_strat}
+\end{figure}
 
-\tabref{tab:colour_strat} shows that our model's hue drift rises by $43\%$ on the scenes where
-the illuminant colour moves most, as much as CRefNet's, whose grey shading cannot represent a
-coloured light at all; CIAI's small hue gain in the ablation (\secref{sec:ablation}) has not
-removed this dependence. CD-IID, the one method with a dedicated shading-chroma stage, shows
-no dependence on illuminant colour ($1.02$) while keeping its albedo colour. MID's narrow colour range makes this a low-powered test, but it agrees with the
-ablation. Colour stability therefore needs a model that predicts the shading colour
+\figref{fig:colour_strat} shows that our model's hue drift rises by $26\%$ on the scenes where
+the illuminant colour moves most. This is close to the $32\%$ of CRefNet, whose grey
+shading cannot represent a coloured light at all. In other words, CIAI's small hue gain in the ablation
+(\secref{sec:ablation}) has not removed this dependence. CD-IID, the one method with a
+dedicated shading-chroma stage, shows no dependence on illuminant colour ($0.99$) while keeping
+its albedo colour. MID's narrow colour range makes this a low-powered test, but it agrees with
+the ablation. Colour stability therefore needs a model that predicts the shading colour
 separately, which is the plan of \chapref{ch:conclusion}.

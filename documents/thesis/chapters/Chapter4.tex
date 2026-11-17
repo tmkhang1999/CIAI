@@ -4,7 +4,8 @@
 \chapter{Implementation}
 \label{ch:implementation}
 
-This chapter covers the full set of loss terms used during training
+The purpose of this chapter is to give every detail needed to reproduce the reported model.
+It covers the full set of loss terms used during training
 (\secref{sec:losses}), the training datasets and how we prepare them
 (\secref{sec:data}), and the optimisation schedule that controls which losses
 and datasets are active at each stage (\secref{sec:schedule}).
@@ -30,10 +31,6 @@ with its weight.
     synthetic datasets that provide them; CIAI terms require multi-illuminant
     pairs and fire only on MID batches during the CIAI stage; physics terms
     apply only where their required targets and masks exist.
-    A gradient-decorrelation loss (forcing albedo and shading edges apart) was
-    evaluated and \emph{rejected}: it assumes albedo and shading edges never
-    coincide, which is false in real scenes, and it erased genuinely shared
-    edges.
   }
   \label{tab:losses}
   \centering
@@ -94,7 +91,7 @@ Finally, a \emph{chroma-direction} term (weight 0.2),
 \end{equation}
 penalises hue and saturation error independently of brightness.
 This term exists because desaturation is the cheap escape for a pixel-wise loss:
-predicting a slightly grey version of every colour lowers $\ell_1$ risk, and
+predicting a slightly grey version of every colour lowers the squared error, and
 $\mathcal{L}_{\text{chroma}}$ makes that escape expensive.
 
 \begin{figure}[t!]
@@ -105,13 +102,12 @@ $\mathcal{L}_{\text{chroma}}$ makes that escape expensive.
     \eqnref{eq:l_albedo} and \eqnref{eq:l_chroma} differ only in whether the vectors
     are normalised first, but that changes what error each one can see.
     $\mathcal{L}_{\text{a}}$ (left) is the raw distance between the predicted and
-    reference albedo vectors, so it conflates hue error with brightness error --- a
-    prediction can lower this loss by getting \emph{closer in scale} without getting
-    the colour right. $\mathcal{L}_{\text{chroma}}$ (right) divides out the length of
-    both vectors before comparing them, so only the angle between them --- the hue ---
-    is penalised. This is the same failure this thesis's corrected MID metrics are built
-    to catch at evaluation time (\secref{sec:mid_results}): a term that cannot
-    distinguish scale from colour will always be satisfiable by discarding colour.
+    reference albedo vectors, so it mixes hue error with brightness error: a prediction
+    can lower this loss by getting \emph{closer in scale} without getting the colour right.
+    $\mathcal{L}_{\text{chroma}}$ (right) divides out the length of both vectors before
+    comparing them, so only the angle between them, the hue, is penalised. The MID
+    chroma error (\secref{sec:metrics}) is built to catch the same failure at evaluation
+    time.
   }
   \label{fig:anchor_geometry}
 \end{figure}
@@ -176,9 +172,9 @@ explain image content (for example a saturated red surface) into $\mathbf{R}$
 instead of the albedo.
 We close it with a supervised residual block (weight 0.5): on Hypersim the
 residual target is the true non-diffuse component of the rendering, and on MID
-the target is $\mathbf{R}^* = 0$ away from specular pixels (physically true for
-the bounced-flash captures), so the loss there penalises \emph{any} residual
-energy.
+the target is $\mathbf{R}^* = 0$ away from specular pixels, so the loss there penalises
+\emph{any} residual energy. This is an approximation: MID frames also contain glossy and
+clipped pixels, which the validity mask removes only in part.
 A small sparsity term (weight 0.02) additionally pushes $\mathbf{R} \to 0$
 inside the valid mask, so the diffuse product rather than the residual must explain
 the image.
@@ -255,7 +251,7 @@ ground-truth albedo (diffuse reflectance) and diffuse illumination for every
 image.
 It is the primary source of supervised signal: albedo, shading, reconstruction,
 and residual targets all come from Hypersim labels.
-The full release is large (multiple terabytes of EXR renders); under a local
+The full release is large (multiple terabytes of HDF5 renders); under a local
 storage budget of 500\,GB we download and train on approximately one quarter of
 the scenes, sampled across the scene split so that the material and layout
 diversity is preserved.
@@ -362,12 +358,12 @@ Training proceeds in two stages, as illustrated in \figref{fig:curriculum}.
 
     % timeline axis
     \draw[-latex] (0, -0.5) -- (12.4, -0.5) node[right, font=\scriptsize] {iteration};
-    \foreach \x/\t in {0/$t_0$, 3/$t_1$, 5/$t_2$, 12/$T$}
+    \foreach \x/\t in {0/0, 3/15k, 5/19k, 12/40k}
       \draw (\x, -0.42) -- (\x, -0.58) node[below, font=\scriptsize] {\t};
 
     % checkpoint markers
     \draw[-latex, thick] (5, -1.7) -- (5, -1.0);
-    \node[lbl, anchor=north] at (5, -1.7) {baseline checkpoint\\(no CIAI, banked)};
+    \node[lbl, anchor=north] at (5, -1.7) {19k checkpoint\\(start of all ablation rows)};
     \draw[-latex, thick] (12, -1.7) -- (12, -1.0);
     \node[lbl, anchor=north] at (12, -1.7) {final model};
 
@@ -383,37 +379,55 @@ Training proceeds in two stages, as illustrated in \figref{fig:curriculum}.
     later joined by InteriorVerse).
     Stage B resumes from the Stage-A checkpoint and adds MID raw pairs with the
     CIAI losses, keeping the synthetic majority as the absolute-colour anchor.
-    The Stage-A checkpoint doubles as the no-CIAI baseline in the ablation
-    study (\secref{sec:ablation}).
+    The 19k checkpoint is the common starting point of all four ablation rows
+    (\secref{sec:ablation}).
   }
   \label{fig:curriculum}
 \end{figure}
 
 \paragraph{Stage A: synthetic warm-up}
-The model first trains on Hypersim alone, after which InteriorVerse joins the
-mix.
+The model first trains on Hypersim alone for 15k iterations, after which InteriorVerse
+joins the mix until 19k.
 Only the supervised, physics, and regularisation losses are active.
 This stage gives the model absolute albedo colour and scale \emph{before} any
 invariance constraint is applied. The ordering matters because an invariance loss
 applied to an unanchored model can be satisfied by collapsing towards grey; on an
 anchored model the supervised losses keep penalising that collapse while the
 invariance loss acts.
-The Stage-A checkpoint is banked as the no-CIAI baseline used throughout
-\chapref{ch:experiments}.
+The colour path (\secref{sec:architecture}) is part of the model from the first
+iteration. The 19k checkpoint is the common starting point of the four ablation rows in
+\secref{sec:ablation}; the rows without CIAI continue from it for the same 21k iterations,
+only without the CIAI losses.
 
 \paragraph{Stage B: CIAI}
-Training resumes from the Stage-A checkpoint with the CIAI configuration: the
+Training resumes from the 19k checkpoint with the CIAI configuration: the
 data mix becomes Hypersim / MID / InteriorVerse (with MID and InteriorVerse
-each roughly matching Hypersim's share), the raw cross-illumination pairs enter
+each at $0.3$ against Hypersim's $0.4$), the raw cross-illumination pairs enter
 through MID, and $\mathcal{L}_{\text{inv}}$/$\mathcal{L}_{\text{expl}}$
 activate.
 The synthetic majority keeps re-anchoring absolute colour throughout,
 preventing drift while the invariance constraint acts on the MID pairs.
 The end-of-schedule checkpoint is the final model reported in
 \chapref{ch:experiments}.
-We describe the schedule here by stage rather than by a specific iteration
-count, so that every configuration compared in \chapref{ch:experiments} is
-held to the same curriculum and the same total training budget.
+
+\tabref{tab:sampling} gives the share of each dataset in every stage.
+
+\begin{table}[t!]
+  \caption[Dataset sampling weights per training stage.]{%
+    Probability that a training sample is drawn from each dataset, per stage.}
+  \label{tab:sampling}
+  \centering
+  \small
+  \begin{tabular}{@{}llccc@{}}
+    \toprule
+    Stage & Iterations & Hypersim & InteriorVerse & MID pairs \\
+    \midrule
+    A, first part  & 0--15k  & 1.0 & 0.0 & 0.0 \\
+    A, second part & 15k--19k & 0.6 & 0.4 & 0.0 \\
+    B (CIAI)       & 19k--40k & 0.4 & 0.3 & 0.3 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \paragraph{Optimisation parameters}
 We use Adam with a base learning rate of $2 \times 10^{-4}$ and cosine annealing
@@ -428,8 +442,7 @@ The model reported as ``Ours'' is this architecture trained under the two-stage 
 above to 40k iterations (Stage~A to 19k, Stage~B from 19k to 40k): Stage~A establishes absolute albedo
 colour and shading structure from Hypersim and InteriorVerse, and Stage~B adds
 the real MID raw cross-illumination pairs and activates the cross-illumination losses
-$\mathcal{L}_{\text{inv}}$ and $\mathcal{L}_{\text{expl}}$ together with the wide
-colour skip.
+$\mathcal{L}_{\text{inv}}$ and $\mathcal{L}_{\text{expl}}$.
 Because the cross-illumination terms require a \emph{second} forward pass on the paired
 frame, the CIAI stage holds two graphs in memory; on the 24\,GB card this caps
 the per-step crop count, which the gradient accumulation above compensates for.
