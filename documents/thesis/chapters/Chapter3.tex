@@ -27,12 +27,9 @@ reflectance) and $S(p) \in \mathbb{R}_{>0}$ is a non-negative scalar shading
 value. Shading describes the illumination arriving at the surface point after
 geometry, visibility, and shadows have had their effect. Albedo describes the
 fraction and colour of that light that the material diffusely reflects. The
-camera observes the reflected result, not either factor in isolation.
-
-Under the assumption of a grey (achromatic) illuminant, $S$ is a scalar and the
-product in \eqnref{eq:iid} is a simple element-wise multiplication: each colour
-channel of $\mathbf{I}$ is scaled by the same amount.
-This makes the colour of each pixel determined entirely by $\mathbf{A}$.
+camera observes the reflected result, not either factor in isolation. Because $S$ is a
+scalar, every colour channel of $\mathbf{I}$ is scaled by the same amount, so the colour of
+each pixel is determined entirely by $\mathbf{A}$.
 
 \subsection{Why Achromatic Shading Fails with Coloured Light}
 
@@ -164,10 +161,6 @@ final block).
 These multi-depth features capture information at different levels of abstraction:
 earlier blocks retain more local texture and colour, while later blocks encode
 semantic and structural information.
-DINOv2 is trained to be invariant to strong photometric augmentation, so we expect its
-patch tokens to change little with illumination: a shadowed and a lit patch of the same
-material should map to similar tokens, which would help the model assign them the same
-albedo. We did not test this property directly.
 
 \subsection{DPT Decoder}
 
@@ -399,8 +392,7 @@ invariant to that colour as well. \figref{fig:wb_lanes} shows one such pair.
 
 The size of what is kept should not be overstated. MID's flash is white, and the colour
 of a raw frame differs from neutral only through light bounced off coloured surfaces:
-measured on the grey probes over the training pairs, the median chromaticity gap between the
-two frames of a pair is $0.030$ (\secref{sec:colour_axis}). Keeping the pairs raw is therefore a choice that
+the colour gap between the two frames of a pair is small (\secref{sec:colour_axis}). Keeping the pairs raw is therefore a choice that
 preserves a small real colour signal, not a source of strong coloured-illuminant
 supervision, and our ablations do not isolate its effect from the other components.
 

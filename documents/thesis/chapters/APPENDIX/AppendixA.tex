@@ -16,8 +16,7 @@ ARAP cites Ordinal Shading Table~1, \emph{not} CD-IID Table~2: CD-IID modifies
 the ARAP scene set (dropping redundant illuminations and adding scenes from the
 MIST dataset), a set we cannot reproduce, whereas Ordinal Shading's table uses
 the original Bonneel et al.\ scenes (the same 52-scene set used throughout
-this chapter). IIW cites Ordinal Shading Table~2 for its zero-shot WHDR figure,
-alongside the fuller reproduced roster of \mycite{yuan25texture}.
+this chapter). IIW cites Ordinal Shading Table~2 for its zero-shot WHDR figure.
 MID has no external citation on any axis; it is a ground-truth-free constancy
 metric that no other published work reports, and MIDIntrinsics is training data
 for both this model and CD-IID, which additionally disqualifies it as a
@@ -31,16 +30,8 @@ identical scores (every metric moves by less than 1\%, in mixed directions,
 consistent with measurement noise rather than a real effect), so 1280 is kept
 throughout for consistency and lower memory use.
 Ordinal Shading \mycite{careaga23ordinal} instead resizes each ARAP image to a
-content-adaptive resolution $R_0$ (Miangoleh et al.'s edge-density criterion),
-capped at 1500 pixels; since $R_0$ is computed per image and not reproducible
-from the published protocol alone, no fixed resolution can replicate it exactly,
-and the 1280-vs-1500 measurement above shows that choice is immaterial to our
-own scores regardless.
-MAW also uses the common 1280-pixel inference cap. Its public scorer then
-resizes every prediction and region mask to $320\times240$ before computing the
-metrics, so the reported numbers are determined at that fixed scoring scale.
-Every locally run method, including the baselines, is evaluated at the same
-resolution within each benchmark.
+content-adaptive resolution capped at 1500 pixels, which cannot be reproduced exactly from
+the published protocol. MAW uses the same 1280-pixel cap.
 \figref{fig:maw_resolution} shows the qualitative plateau this is chosen from:
 raising the full-CIAI prediction from 1280 to 1792 or 2560 changes little
 visually, whereas 512 visibly softens fine structure at the resolutions where
@@ -57,10 +48,44 @@ that matters (MID, IIW).
     Each panel repeats the same black-sofa-armrest crop in the upper right with a red
     border to make blur differences easier to compare.
     Fine structure improves substantially from 512 to 1280 pixels, then largely
-    plateaus. We therefore use the common 1280-pixel inference cap for every
-    locally run MAW method; the official scorer subsequently reduces predictions
-    to $320\times240$ before measuring the metrics.
+    plateaus, which is why the 1280-pixel cap is used.
   }
   \label{fig:maw_resolution}
 \end{figure}
 
+\section{MAW Scores}
+\label{sec:app_maw}
+The public scorer first resizes the prediction and region mask to $320\!\times\!240$
+and extracts a robust median RGB vector $\hat{\mathbf a}_m$ for each measured material
+region $m$; $\mathbf a_m^\star$ is the corresponding measured reference and $w_m$ is
+the region area. Let $\ell(\mathbf x)=\tfrac{1}{3}\sum_c x_c$ denote the scorer's
+RGB channel mean. The colour score removes intensity independently for each material,
+$\beta_m=\ell(\mathbf a_m^\star)/\ell(\hat{\mathbf a}_m)$, and reports the area-weighted
+CIEDE2000 colour difference,
+\begin{equation}
+  \Delta E_{00} =
+  \frac{\sum_m w_m\,
+  \Delta E_{00}\!\left(\mathrm{Lab}(\beta_m\hat{\mathbf a}_m),
+  \mathrm{Lab}(\mathbf a_m^\star)\right)}{\sum_m w_m}.
+  \label{eq:deltae}
+\end{equation}
+This per-material scale alignment makes the score primarily a chromaticity test rather
+than a test of recovered intensity. It is therefore the primary external score for colour
+accuracy.
+
+The second score tests relative material brightness. Writing
+$\hat l_m=\ell(\hat{\mathbf a}_m)$ and $l_m^\star=\ell(\mathbf a_m^\star)$, the scorer fits
+one area-weighted global scale
+\begin{equation}
+  \alpha^\star =
+  \frac{\sum_m w_m\hat l_m l_m^\star}
+       {\sum_m w_m\hat l_m^2},
+  \qquad
+  \text{SI-MSE} =
+  \frac{\sum_m w_m(\alpha^\star\hat l_m-l_m^\star)^2}{\sum_m w_m}.
+  \label{eq:simse}
+\end{equation}
+Because the scale is fitted away, this score is insensitive to a uniformly too-dark
+or too-bright prediction and instead penalises the wrong \emph{relative} lightness of
+different materials. It does not directly measure spatial blur, although smoothing can
+change the robust region medians on which it is computed.

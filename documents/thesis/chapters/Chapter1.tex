@@ -305,8 +305,8 @@ answered.
 
 These choices follow from the data. MID is used because it is the only real dataset with
 many illuminations per scene and a dense albedo reference. The explanation loss is defined
-on luminance because MID's pairs differ mainly in brightness; a colour term would mostly fit
-noise on a median gap of $0.030$. The encoder is frozen because it gives strong features at
+on luminance because MID's pairs differ mainly in brightness, so a colour term would mostly fit
+noise. The encoder is frozen because it gives strong features at
 a cost that fits one GPU, and because it lets the effect of CIAI be measured on a fixed
 backbone.
 
@@ -332,8 +332,8 @@ The contributions of this work are:
 
   \item \textbf{An evaluation that reports stability next to accuracy} (\secref{sec:metrics}).
   Material-level stability on MID is always read beside accuracy against measured albedo
-  (MAW) and against the MID pseudo-ground truth, because a grey, constant albedo is
-  perfectly stable.
+  (MAW) and against the MID pseudo-ground truth, so that a flat albedo cannot score well
+  (\figref{fig:intro_trivial}).
 
 \end{enumerate}
 \chapref{ch:conclusion} sets out the next stage of the work, a model that separates shading

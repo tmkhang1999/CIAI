@@ -13,8 +13,7 @@ started this thesis (\figref{fig:intro_enhance}).
 
 This chapter is a proof of concept, not a second evaluation. Each edit is defined directly on
 the predicted factors, so its behaviour follows from how the factors are built; we have no user
-study or application metric to score it. The decomposition is shown first
-(\figref{fig:decomposition}), and the two edits are then read as operations on it.
+study or application metric to score it.
 
 All edits below start from the decomposition
 $\mathbf{I} = \mathbf{A} \odot \mathbf{S}_d + \mathbf{R}$,
@@ -38,10 +37,6 @@ sources, and clipped regions (\secref{sec:physics}).
   \label{fig:decomposition}
 \end{figure}
 
-The two edits below each act on a single factor of the decomposition, one on the
-residual $\mathbf{R}$ and one on the shading $\mathbf{S}_d$, so their behaviour follows
-directly from how those factors are defined.
-
 
 \section{Factor-Space Editing}
 \label{sec:factor_edit}
@@ -60,21 +55,12 @@ Scaling it yields the edit
   \qquad \alpha \in [0, 1] .
   \label{eq:glare}
 \end{equation}
-Setting $\alpha < 1$ dims energy assigned to the residual while holding the
-model's predicted diffuse product fixed; $\alpha = 0$ removes that component
-entirely.
-The same operation performed in image space (for example, lowering the exposure
-of bright regions) also changes diffuse regions; residual scaling instead holds
-the model's predicted diffuse product fixed.
-This is the same operation used for highlight editing by
-\mycitetext{careaga24cdiid}, but whether it behaves as a selective highlight
-control depends on the quality of the decomposition.
-
-Because $\mathbf{R}$ is the analytic leftover of \figref{fig:decomposition} rather than a
-segmented highlight region, reducing $\alpha$ suppresses everything the diffuse product
-fails to explain, diffuse surfaces included, not one isolated highlight. Residual scaling
-is therefore a targeted edit on a predicted factor, not a semantic glare mask or a
-general-purpose glare remover; how selective it appears is governed entirely by the
+Setting $\alpha < 1$ dims the residual while holding the predicted diffuse product fixed,
+whereas lowering the exposure of bright regions in image space also changes diffuse regions.
+This is the operation used for highlight editing by \mycitetext{careaga24cdiid}. Because
+$\mathbf{R}$ is the analytic leftover of \figref{fig:decomposition} rather than a segmented
+highlight region, reducing $\alpha$ suppresses everything the diffuse product fails to
+explain, diffuse surfaces included, so how selective the edit is depends entirely on the
 quality of the decomposition.
 
 \paragraph{Illumination editing}
@@ -135,12 +121,6 @@ exactly where the edit changes the material along with the light.
   }
   \label{fig:enhance_gain}
 \end{figure}
-
-By construction this holds the predicted albedo of \figref{fig:decomposition} fixed,
-whereas the same luminance gain applied to the entangled image multiplies material and
-illumination together and so shifts material appearance as well. The edit is therefore a
-statement about controllability of the predicted factors, not about ground-truth
-preservation.
 
 Both edits succeed exactly to the degree the decomposition does, and their two
 failure modes map onto the two axes measured in \chapref{ch:experiments}. Wherever

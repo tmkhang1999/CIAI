@@ -60,9 +60,8 @@
   & An image processing step that neutralises the colour of the illuminant,
     making images appear as if they were lit by a pure white light.
     White balance is applied by cameras automatically or in post-processing.
-    In this work, per-frame WB is \emph{disabled} for the MID training pairs so
-    that the small illuminant colour difference between two flash directions is
-    kept; it does not change intensity, so the brightness change between frames is
-    present either way. \\[4pt]
+    In this work, the first frame of each MID training pair is white-balanced and
+    the second is left raw, so the small illuminant colour difference between the
+    two flash directions is kept (Sect.~\ref{sec:raw_pairs}). \\[4pt]
 
 \end{longtable}

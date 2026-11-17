@@ -118,16 +118,9 @@ Very recent work reaches for external knowledge instead: ReasonX
 reports strong IIW WHDR improvements; no public checkpoint was available at the
 time of writing, so we cite its published numbers only where protocols match.
 
-\paragraph{Comparison scope}
-The methods above are not all compared in the same way. We run models locally
-only when an official checkpoint and compatible output are available: Marigold-IID,
-CRefNet, Ordinal Shading, CD-IID and RGB$\rightarrow$X \mycite{zeng24rgbx}. We cite
-ReasonX and older methods from their papers only when the dataset split and metric
-match our protocol. This
-distinction matters because a published number obtained with different training
-data, resizing, or test scenes is context, not a controlled head-to-head result.
-Chapter~5 marks locally reproduced and literature-cited rows separately and
-explains why each model is included.
+Of these, Marigold-IID, CRefNet, Ordinal Shading, CD-IID and RGB$\rightarrow$X
+\mycite{zeng24rgbx} are run locally in \chapref{ch:experiments}; the others are cited from
+their papers (\secref{sec:exp_setup}).
 
 What these methods share is that each image is decomposed, and supervised, on its own.
 Nothing in a single-image objective tells the model that two photographs of the same
@@ -144,21 +137,8 @@ The specific challenge of coloured illumination in IID has received relatively
 little attention compared to the broader IID problem.
 Most methods implicitly assume a single white or near-white illuminant.
 
-The cost of that assumption is arithmetic rather than model-specific. If shading
-is scalar, it has no hue, so a coloured illuminant must be represented in the
-only RGB factor: albedo. Chapter~3 derives this limitation and demonstrates it
-visually in \figref{fig:formulation}; this section focuses on how prior work has
-responded to it.
-
-Work on multi-illuminant colour constancy in computational photography provides
-useful context.
-\mycitetext{beigpour13miid} addressed the problem of estimating multiple coloured
-illuminants from a single image using a conditional random field formulation.
-They created the MIID dataset, which contains scenes photographed under combinations
-of coloured light sources with ground-truth illuminant annotations.
-This is a different task from IID (they estimate illuminant colours rather than
-separate albedo from shading), but the setup is closely related and provides
-inspiration for the multi-illuminant pair training we use in this work.
+With a scalar shading, a coloured illuminant can only go into the albedo
+(\secref{sec:physics}); this section covers how prior work has responded.
 
 \paragraph{Training on one scene under several illuminations}
 Using several images of a static scene under changing light is an old idea in IID:
@@ -219,32 +199,12 @@ We instead take the constraint from real photographs of real rooms
 \chapref{ch:experiments}, is that the real corpus available varies the direction and
 intensity of a white light far more than its colour.
 
-This family of work also suggests the shape of a sensible metric.
-If a model is genuinely illuminant-invariant, the chromaticity it assigns to one
-physical material must not move when the light changes.
-Our stability measures ($C_{\text{mat}}$ and $\text{Cast}_{\text{rel}}$ on MID,
-$C_{\text{arap}}$ on ARAP) are built directly on that statement: they group the
-renderings or photographs of one scene by illumination and report how much the
-predicted albedo of each material drifts across the group (\secref{sec:mid_results}).
-They are our own diagnostics rather than a published protocol, which is why we
-report them alongside, not instead of, accuracy against measured albedo.
-
 
 \section{Evaluation Benchmarks}
 \label{sec:benchmarks}
 
 We evaluate our model on four benchmarks that together cover different aspects of IID
 quality.
-
-\paragraph{Dataset, split, protocol, and benchmark}
-These terms are kept distinct throughout the thesis. A \emph{dataset} is a
-collection of images and annotations. A \emph{split} identifies which samples
-are used for training, validation, or testing. An evaluation \emph{protocol}
-specifies preprocessing, eligible samples, and a metric. A \emph{benchmark} is
-the held-out data together with that protocol. Thus MID is both a source of
-training pairs and an evaluation dataset, but the CIAI training scenes and the
-30-scene test split never overlap. Calling a collection a ``database'' adds no
-useful distinction here, so this thesis uses \emph{dataset} consistently.
 
 The four benchmarks answer different questions. MID tests whether a real
 surface stays stable across lights; MAW measures real material colour on sampled
@@ -280,9 +240,6 @@ annotated with human pairwise reflectance comparisons.
 The evaluation metric is WHDR: the fraction of annotator pairs (weighted by
 confidence) with which the model's albedo ordering disagrees.
 Lower WHDR is better.
-IIW rewards agreement with perceived relative reflectance. Its human labels are
-appropriate for that perceptual question, but the ordinal lightness comparison
-does not measure RGB colour, absolute albedo, or dense texture.
 We evaluate on the standard test split of 1,046 images (every fifth image of the
 5,230), and report WHDR as the mean over images rather than pooled over
 judgements.
@@ -297,9 +254,8 @@ fixed viewpoint with a flash bounced in a different direction for every shot, an
 a grey and a chrome probe in every frame.
 The flash is white, so between two frames the light changes mainly in
 \emph{direction and intensity}. Its colour changes only because the bounced light picks up
-the colour of the wall or ceiling it reflects from: measured on the grey probes over all 25 flash
-directions, the median chromaticity distance between the illuminants of two frames of a scene
-is $0.030$, and $86\%$ of frame pairs lie below $0.08$ (\secref{sec:colour_axis}).
+the colour of the wall or ceiling it reflects from, and only slightly
+(\secref{sec:colour_axis} measures how much).
 The key property is that the albedo of each surface does not change across the 25
 frames; only the light does. MIDIntrinsics \mycite{careaga23ordinal} adds one dense
 pseudo-ground-truth albedo per scene, derived from the white-balanced capture stack and
@@ -308,7 +264,8 @@ albedo of each material changes across frames ($C_{\text{mat}}$ for luminance,
 $\text{Cast}_{\text{rel}}$ for hue), and how far it lies from the pseudo-ground truth.
 A perfectly illumination-invariant model would have zero variation.
 We hold out 30 scenes as a test split and report constancy on those; the training
-split is used for the CIAI pairs (\chapref{ch:implementation}).
+split, whose scenes never overlap with the test split, is used for the CIAI pairs
+(\chapref{ch:implementation}).
 
 \subsection{ARAP}
 \label{sec:arap_dataset}
@@ -316,34 +273,18 @@ split is used for the CIAI pairs (\chapref{ch:implementation}).
 ARAP (``As Real As Possible'') is a synthetic high-dynamic-range dataset of
 around 50 rendered indoor and outdoor scenes \mycite{arap}.
 A subset of scenes ships with multiple renderings under different lighting
-conditions (direction, intensity, and in some scenes light colour); we evaluate
-constancy on the 37 multi-light scene groups (23 indoor), and additionally
-report the coloured-illuminant subset in which the light \emph{colour} varies
-across renderings, which is the axis this thesis targets.
-ARAP provides ground-truth albedo images, which allows measuring not only stability
-across conditions (the $C_{\text{arap}}$ metric) but also the accuracy of the predicted
-albedo against the ground truth. The ground truth is, however, stored in three different
-encodings across scenes; \secref{sec:arap_results} describes how our evaluation mask
-treats them.
-The constancy metrics group scene renderings by the illuminant condition and
-measure how consistent the predicted albedo is across groups.
-Our local study reports LMSE, SSIM, and a mean-normalised RMSE diagnostic. This
-implementation is not the least-squares scale-invariant RMSE used in published
-ARAP tables, so Chapter~5 keeps the local and published protocols separate.
-The two types of metric capture different things: a model can have good constancy
-(stable albedo across illuminants) while still being wrong about the absolute
-material colour, and vice versa.
+conditions (direction, intensity, and in some scenes light colour). Because ARAP
+also provides dense ground-truth albedo, it is the only benchmark here on which
+stability across lights and accuracy can be measured on the same pixels
+(\secref{sec:arap_results}).
 
 \subsection{MAW: Measured Albedo in the Wild}
 \label{sec:maw_dataset}
 
-MAW \mycite{maw} is a benchmark of real indoor images paired with ground-truth
-albedo measurements obtained through a controlled physical measurement process.
-It provides a direct measure of albedo colour accuracy through two metrics:
-$\Delta E$ (the CIELAB colour difference between predicted and measured albedo)
-and intensity SI-MSE (scale-invariant mean square error on the luminance channel).
-$\Delta E$ captures colour error in a perceptually motivated space after the
-official scorer's per-material scale alignment.
-MAW is particularly valuable because it measures real scenes where the illuminant
-colour is part of the challenge, making it complementary to the synthetic ARAP.
+MAW \mycite{maw} is a benchmark of real indoor images with physically measured albedo.
+Each surface is photographed twice, once with a grey card of known reflectance resting on it
+and once without. Surface and card receive the same light, so the shading cancels in the
+ratio of the two measurements and leaves the surface's albedo in absolute terms. MAW
+therefore measures material colour on real photographs, which complements the synthetic
+ARAP. It reports a colour error $\Delta E$ and an intensity error (\secref{sec:maw_results}).
 We evaluate on 874 images from the MAW test split.

@@ -73,8 +73,7 @@ factor per image (albedo is only defined up to scale):
 where $\Omega_m$ excludes invalid pixels (missing labels, clipped regions).
 This is the dominant \emph{absolute-colour anchor} of the whole system: CIAI
 constrains albedo to be equal \emph{across} illuminants but says nothing about
-what the correct colour \emph{is}; without a strong absolute anchor, the
-invariance constraint alone could be satisfied by grey.
+what the correct colour \emph{is}.
 Three companions sharpen this anchor.
 A structural dissimilarity term $\mathcal{L}_{\text{dssim}}$ (DSSIM, weight 0.2)
 penalises local structure differences.
@@ -222,12 +221,7 @@ essentially free.
 \section{Training Data}
 \label{sec:data}
 
-Three datasets participate in training, each with a distinct role. In this
-chapter, \emph{dataset} means a collection from which training samples are drawn.
-It does not mean an evaluation procedure. Chapter~5 uses held-out data together
-with a fixed protocol and metric; that combination is a \emph{benchmark}. MID
-appears in both roles, but its training and test scenes are disjoint.
-They are existing public corpora and carry the two-stage schedule of
+Three public datasets participate in training, following the two-stage schedule of
 \secref{sec:schedule}: Hypersim and InteriorVerse supply supervised albedo, and
 MID supplies the real cross-illumination pairs that CIAI trains on.
 
@@ -289,37 +283,10 @@ The white-balanced primary frame is supervised against this pseudo-GT with the
 standard albedo losses, which anchors absolute colour on real photographs.
 
 \emph{(ii) A raw cross-illumination pair.}
-A second frame of the same scene, under a different bounce direction, is loaded
-\emph{raw}, without white balance, together with a per-pair HDR validity mask
-that drops pixels clipped or near-black in either frame.
-The CIAI losses operate on this pair.
-Skipping white balance here (the \texttt{mid\_raw\_color\_pair} flag,
-\secref{sec:raw_pairs}) keeps the small bounce-colour difference between the two
-frames; the brightness and shadow change, which is the main signal MID provides, is
-present either way.
-An earlier configuration added random global tints to the pair frame to create colour
-differences synthetically; it did not help in our early tests and was dropped.
-\figref{fig:mid_preprocessing} summarises this preprocessing split: the
-white-balanced primary frame provides the supervised colour anchor, while the raw
-paired frames preserve the illuminant change used by CIAI.
+A second frame of the same scene, under a different flash direction, is loaded raw
+together with the validity mask $\Omega_v$, and the CIAI losses operate on the pair
+(\secref{sec:raw_pairs}, \figref{fig:wb_lanes}).
 
-\begin{figure}[t!]
-  \centering
-  \includegraphics[width=0.92\textwidth]{images/hires/mid_preprocessing.jpg}
-  \caption[MID training preprocessing paths.]{%
-    MID preprocessing used during training; this is a data-loading diagram, not
-    an evaluation protocol.
-    The supervised path uses a white-balanced primary frame and the dataset
-    pseudo-ground-truth albedo to anchor absolute material colour on real
-    photographs.
-    The CIAI path keeps two aligned frames raw, without white balance, and masks
-    pixels that are clipped or too dark in either exposure before applying the
-    cross-illumination losses.
-    This split keeps the albedo target stable while preserving the illuminant
-    chromaticity change that CIAI needs as supervision.
-  }
-  \label{fig:mid_preprocessing}
-\end{figure}
 
 \section{Optimisation Schedule}
 \label{sec:schedule}
@@ -390,10 +357,7 @@ The model first trains on Hypersim alone for 15k iterations, after which Interio
 joins the mix until 19k.
 Only the supervised, physics, and regularisation losses are active.
 This stage gives the model absolute albedo colour and scale \emph{before} any
-invariance constraint is applied. The ordering matters because an invariance loss
-applied to an unanchored model can be satisfied by collapsing towards grey; on an
-anchored model the supervised losses keep penalising that collapse while the
-invariance loss acts.
+invariance constraint is applied (\tabref{tab:ciai_glance}).
 The colour path (\secref{sec:architecture}) is part of the model from the first
 iteration. The 19k checkpoint is the common starting point of the four ablation rows in
 \secref{sec:ablation}; the rows without CIAI continue from it for the same 21k iterations,
@@ -438,14 +402,7 @@ batch size 32), with gradient-norm clipping at 1.0.
 All training runs on a single 24\,GB NVIDIA Quadro RTX 6000.
 
 \paragraph{The reported configuration}
-The model reported as ``Ours'' is this architecture trained under the two-stage schedule
-above to 40k iterations (Stage~A to 19k, Stage~B from 19k to 40k): Stage~A establishes absolute albedo
-colour and shading structure from Hypersim and InteriorVerse, and Stage~B adds
-the real MID raw cross-illumination pairs and activates the cross-illumination losses
-$\mathcal{L}_{\text{inv}}$ and $\mathcal{L}_{\text{expl}}$.
-Because the cross-illumination terms require a \emph{second} forward pass on the paired
-frame, the CIAI stage holds two graphs in memory; on the 24\,GB card this caps
-the per-step crop count, which the gradient accumulation above compensates for.
-The frozen DINOv2-Large encoder (304\,M parameters) is kept in evaluation mode
-throughout, so only the $\sim$18.5\,M decoder-and-head parameters receive
-gradients, which is the main reason the whole pipeline fits on a single commodity GPU.
+The model reported as ``Ours'' is the end of this schedule at 40k iterations. Because the
+CIAI terms need a second forward pass on the paired frame, the CIAI stage holds two graphs
+in memory; on the 24\,GB card this caps the per-step crop count, which the gradient
+accumulation above compensates for.

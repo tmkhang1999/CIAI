@@ -109,27 +109,14 @@
     \end{scope}
   \end{tikzpicture}}
   \caption[Model architecture and supervision.]{%
-    Model architecture and its supervision. A \emph{frozen} DINOv2-Large encoder (teal)
-    extracts patch features from four transformer stages; it is never fine-tuned, so only
-    $18.5$M parameters downstream are learned. A DPT decoder (blue)
-    reassembles and fuses the four levels into a shared full-resolution feature map. Two
-    output heads (amber) read it. The albedo head additionally takes a full-resolution
-    \emph{RGB skip}: the gamma-encoded input image, concatenated in directly. With the
-    chroma loss on albedo it forms the colour path, which restores the material colour the
-    frozen-encoder model otherwise washes out (\secref{sec:ablation}); it is also a direct
-    route for illuminant colour into $\mathbf{A}$, which is why the planned model replaces
-    the raw input with the input divided by the predicted shading. The
-    shading head has no such skip; it predicts the inverse shading $\boldsymbol{\pi}$ from the
-    shared DPT features alone, from which
-    $\mathbf{S}_d=(1-\boldsymbol{\pi})/\boldsymbol{\pi}$ follows. The non-diffuse residual
-    $\mathbf{R}=(\mathbf{I}-\mathbf{A}\odot\mathbf{S}_d)_{+}$ is analytic; there is no third
-    head. Red nodes are the training losses on each output: the albedo family
-    ($\mathcal{L}_{\text{a}}$ with its multi-scale-gradient, structural, chroma and
-    material-consistency terms), the shading family ($\mathcal{L}_{\text{s}}$ with its
-    gradient and sign terms), and a sparsity term $\mathcal{L}_{\text{res}}$ that pushes the
-    analytic residual toward zero. The cross-illumination invariance loss $\mathcal{L}_{\text{inv}}$
-    also constrains the albedo but acts across an illuminant pair at training time only
-    (\figref{fig:ciai}). Thumbnails are outputs of our model on a MID test scene.
+    Model architecture and its supervision (\secref{sec:architecture}). The DINOv2-Large
+    encoder (teal) is frozen; only the DPT decoder (blue) and the two output heads (amber),
+    $18.5$M parameters, are trained. The albedo head also receives the input image through an
+    RGB skip (the colour path); the shading head predicts the inverse shading
+    $\boldsymbol{\pi}$, and the residual $\mathbf{R}$ is computed analytically, with no third
+    head. Red nodes are the training losses on each output; $\mathcal{L}_{\text{inv}}$ acts
+    across a pair at training time only (\figref{fig:ciai}). Thumbnails are outputs of our
+    model on a MID test scene.
   }
   \label{fig:architecture}
 \end{figure}
