@@ -8,6 +8,8 @@ The previous chapter measured the decomposition. The purpose of this chapter is 
 it can be used. Once an image is split into an albedo and a three-channel shading, it can be
 edited by changing one factor and leaving the other untouched, which no edit on the raw
 pixels can do. We call this \emph{factor-space editing} and present two instances of it.
+The second one, brightening the shading only, is the photo-enhancement use case that
+started this thesis (\figref{fig:intro_enhance}).
 
 This chapter is a proof of concept, not a second evaluation. Each edit is defined directly on
 the predicted factors, so its behaviour follows from how the factors are built; we have no user
@@ -101,12 +103,38 @@ with the gain capped at $2.5$. Low predicted illumination is lifted while values
 at or above the reference percentile are unchanged.
 Because $\mathbf{A}$ is untouched, the model's predicted material colours and
 texture are held fixed while its predicted illumination changes.
-This is where the invariance targeted throughout the thesis pays off directly: an
-albedo that does not carry the illuminant's colour can be re-lit without its materials
-drifting in hue, so lifting a dark, warm-lit corner reveals the surfaces' own colour
-rather than amplifying the lamp's cast. The result is a shading edit built directly on
-the decomposition, and its fidelity is bounded by how completely that cast was removed
-in the first place.
+This is where the stable albedo targeted throughout the thesis pays off directly: lighting
+that was moved out of the albedo can be changed by the edit, and lighting that stayed in it
+cannot. The result is a shading edit built directly on the decomposition, and its fidelity
+is bounded by how completely the lighting was removed from the albedo in the first place.
+
+\figref{fig:intro_enhance} applies this edit with $\gamma = 0.5$ to the photograph of
+\figref{fig:decomposition}. The edit is computed from the saved factors of that figure: the
+diffuse part is taken as $\mathbf{I} - \mathbf{R}$, which equals
+$\mathbf{A} \odot \mathbf{S}_d$ wherever the residual is zero, and is multiplied by the
+per-pixel gain of \eqnref{eq:shadow_lift}; the residual is added back unchanged. For
+comparison, the middle panel applies the same gain rule to the luminance of the photograph
+itself. \figref{fig:enhance_gain} shows where each gain acts. Computed from the image, the
+gain is high on every dark pixel, including dark materials such as the lamp, the table legs
+and the floor boards. Computed from the predicted shading, it is high mainly where the
+light is weak: the shadow behind the lamp, the doorway and the dark window. The shading
+gain is not perfectly clean. The poster, for example, still shows up in it, because part of
+its dark print was assigned to the shading rather than to the albedo. Such leaks are
+exactly where the edit changes the material along with the light.
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=0.92\textwidth]{images/ch6/enhance_gain.jpg}
+  \caption[Where the brightness gain acts.]{%
+    Where the brightness gain of \eqnref{eq:shadow_lift} acts, for the edits of
+    \figref{fig:intro_enhance} ($\gamma = 0.5$, cap $2.5$). \emph{Left:} gain computed from
+    the luminance of the photograph; dark materials such as the lamp, the table legs and the
+    floor are lifted along with the shadows. \emph{Right:} gain computed from our predicted
+    shading; it follows the light rather than the materials, with a few leaks such as the
+    poster.
+  }
+  \label{fig:enhance_gain}
+\end{figure}
 
 By construction this holds the predicted albedo of \figref{fig:decomposition} fixed,
 whereas the same luminance gain applied to the entangled image multiplies material and

@@ -65,6 +65,34 @@ pattern or its colour, remains baked into the estimated material.
   \label{fig:intro_layers}
 \end{figure}
 
+This thesis started from one such application. It was carried out at 3DUniversum, where
+photographs of interiors, for example for real-estate listings, often need to be enhanced:
+the dark corners should be brighter and the lighting more even, while walls, floors and
+furniture keep their real appearance. Editing the pixels directly cannot do this well. A
+pixel does not tell whether it is dark because it lies in a shadow or because the material
+itself is dark, so brightening the image lifts a shadowed wall and a dark lamp by the same
+amount, and the lamp turns grey (\figref{fig:intro_enhance}, middle). IID offers a cleaner
+route: brighten only the shading layer and keep the albedo as it is
+(\figref{fig:intro_enhance}, right). This route works only if the albedo is free of
+lighting. A shadow or a bright patch that stays in the albedo cannot be reached by a
+shading edit, so it stays in the enhanced photograph too. An albedo that does not change
+with the light is therefore the goal of this thesis, and \chapref{ch:practice} returns to
+this example.
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=\textwidth]{images/ch6/enhance.jpg}
+  \caption[Why a clean albedo matters for photo enhancement.]{%
+    Why a clean albedo matters for photo enhancement. \emph{Left:} an indoor photograph.
+    \emph{Middle:} a brightness gain that is large on dark pixels, applied to the whole
+    image. It also lifts dark materials, so the dark lamp and the window turn grey.
+    \emph{Right:} the same kind of gain computed from our predicted shading and applied to
+    the shading only, with the albedo and residual unchanged. The shadow of the lamp on the
+    wall becomes lighter while the lamp keeps its colour. Bottom row: $2\times$ crops of the
+    red box. The edit is defined in \secref{sec:factor_edit}.
+  }
+  \label{fig:intro_enhance}
+\end{figure}
 
 \section{The Problem: Lighting Leaks into the Albedo}
 \label{sec:intro_problem}

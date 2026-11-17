@@ -8,7 +8,7 @@
   <meta name="author" content="Minh Khang Tran">
   <meta property="og:title" content="Luminance Constancy in Intrinsic Image Decomposition via Cross-Illumination Albedo Invariance (CIAI)">
   <meta property="og:description" content="Training on real photographs of one scene under different lighting so the recovered albedo keeps its luminance when the light changes.">
-  <meta property="og:image" content="https://tmkhang1999.github.io/CIAI/static/img/ciai-teaser.jpg">
+  <meta property="og:image" content="https://tmkhang1999.github.io/CIAI/static/img/ciai-hero.jpg">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232c5c7a'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23dbeafb'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -934,12 +934,12 @@
 
     <!-- ── Teaser ──────────────────────────────────── -->
     <div class="teaser-wrap">
-      <img src="static/img/ciai-teaser.jpg" class="teaser-img"
-           alt="Top row: one indoor scene photographed four times with a flash bounced in a different direction each time, so brightness and shadows change. Bottom row: the albedo our model recovers from each of those four photographs.">
+      <img src="static/img/ciai-hero.jpg" class="teaser-img"
+           alt="One held-out scene of clothes under three flash directions. Columns: input, ground-truth albedo, our albedo, Marigold-Light and Marigold-App. The two baselines change between rows; ours changes less.">
       <p class="teaser-caption">
-        One scene photographed with the flash bounced in four directions (top), and the albedo our model
-        predicts from each photograph separately (bottom). The surfaces do not change between the shots,
-        so the predicted albedo should not change either.
+        One held-out scene under three flash directions. The surfaces do not change, so the albedo should not
+        either. The two baselines that change most on this scene shift with the light; ours changes less,
+        though it is paler than the ground truth. All seven methods are compared in Figure 7.
       </p>
     </div>
 
@@ -959,11 +959,13 @@
       <h2 class="ciai-section-title">Train on two lights, predict from one</h2>
       <ul class="contrib-list">
         <li><strong>The problem.</strong> One photograph cannot tell a dark surface from a dimly lit one, so part
-          of the light leaks into the recovered albedo.</li>
+          of the light leaks into the recovered albedo. This work started from enhancing interior photographs,
+          for example for real-estate listings, at 3DUniversum: brightening only the shading keeps the materials as
+          they are, but only if the albedo holds no lighting (Figure 1).</li>
         <li><strong>The goal.</strong> From one image, an albedo whose luminance stays the same when only the light
           changes, without losing the colour of the material.</li>
         <li><strong>Why it is hard.</strong> Real photographs have no albedo ground truth, and stability alone has a
-          trivial answer: a flat grey albedo never changes, but it is wrong (Figure 1). The only real dataset with
+          trivial answer: a flat grey albedo never changes, but it is wrong (Figure 2). The only real dataset with
           many lights per scene and a dense albedo reference, MID, also uses a white flash, so its light colour
           barely changes.</li>
         <li><strong>The idea.</strong> Two photographs of one scene under different light go through the same
@@ -976,10 +978,19 @@
           luminance only.</li>
       </ul>
       <div class="ciai-figure">
+        <img src="static/img/ciai-enhance.jpg"
+             alt="An indoor photograph, the same photograph brightened as a whole, and brightened through the predicted shading only, with 2x crops of the lamp and its shadow.">
+        <p class="fig-caption">
+          <strong>Figure 1. Why a clean albedo matters.</strong> Brightening the whole image (middle) also lifts dark
+          materials, so the dark lamp turns grey. Brightening only our predicted shading (right) lightens the shadow
+          on the wall and keeps the lamp dark.
+        </p>
+      </div>
+      <div class="ciai-figure">
         <img src="static/img/ciai-stable-vs-correct.jpg"
              alt="Schematic: three materials predicted from two frames. (a) The brightness pattern of the light stays in the albedo, so the frames differ. (b) A flat grey albedo is identical in both frames but has lost all colour. (c) The goal is identical in both frames and keeps the colours.">
         <p class="fig-caption">
-          <strong>Figure 1. Stable is not the same as correct.</strong> A flat grey albedo (b) is perfectly stable.
+          <strong>Figure 2. Stable is not the same as correct.</strong> A flat grey albedo (b) is perfectly stable.
           This is why CIAI has a second loss, and why every stability score on this page sits next to an accuracy
           score.
         </p>
@@ -1005,14 +1016,14 @@
         Write a photograph as <strong>I = A &#8857; S<sub>d</sub> + R</strong>: albedo times shading, plus a residual for
         highlights. From one image, a grey wall in shadow and a dark wall in full light are the same pixels, so
         whatever the model cannot attribute to the light ends up in the albedo. Existing models show both failure
-        modes of Figure 1.
+        modes of Figure 2.
       </p>
 
       <div class="ciai-figure">
         <img src="static/img/ciai-baselines.jpg"
              alt="One MID scene under two lighting conditions, with the albedo predicted by CRefNet and by Marigold-Appearance for each. CRefNet's albedo is pale; Marigold's changes between the two lights.">
         <p class="fig-caption">
-          <strong>Figure 2. Existing models under two lights.</strong> CRefNet stays similar across the two lights
+          <strong>Figure 3. Existing models under two lights.</strong> CRefNet stays similar across the two lights
           partly because its albedo is pale, and Marigold-App keeps more colour but shifts with the light.
         </p>
       </div>
@@ -1028,7 +1039,7 @@
         <img src="static/img/ciai-pairs.jpg"
              alt="The same table of objects photographed with the flash bounced in two directions, with a zoomed crop of a book cover under each. Brightness and shadows change between the two frames; the light colour changes only slightly.">
         <p class="fig-caption">
-          <strong>Figure 3. One MID pair.</strong> Same camera, same objects, the flash bounced in a different
+          <strong>Figure 4. One MID pair.</strong> Same camera, same objects, the flash bounced in a different
           direction. The flash is white, so the light mainly changes in direction and intensity.
         </p>
       </div>
@@ -1037,7 +1048,7 @@
         <img src="static/img/ciai-mechanism.jpg"
              alt="Diagram: two photographs of the same scene with the flash in different directions pass through one shared model. The two predicted albedos are tied by the invariance loss; the two predicted shadings are tied by the explanation loss on the luminance ratio.">
         <p class="fig-caption">
-          <strong>Figure 4. CIAI at training time.</strong> One shared model, two passes.
+          <strong>Figure 5. CIAI at training time.</strong> One shared model, two passes.
         </p>
       </div>
 
@@ -1052,7 +1063,7 @@
           <div class="metric-name">L<sub>expl</sub> <span class="arrow">shading explanation</span></div>
           <div class="metric-role">the shading must explain the change</div>
           <div class="metric-desc">The log luminance ratio of the two shadings must equal that of the two
-            images. It rules out the flat albedo of Figure 1, and it sees brightness only.</div>
+            images. It rules out the flat albedo of Figure 2, and it sees brightness only.</div>
         </div>
       </div>
 
@@ -1077,7 +1088,7 @@
         <img src="static/img/ciai-metrics.jpg"
              alt="Three small diagrams. C_mat: four bars of equal height for a stable material, unequal bars for an unstable one. Cast_rel: chroma points clustered for a stable material, sliding along the lamp colour for a drifting one. Chroma_err: prediction close to the reference colour, or far from it.">
         <p class="fig-caption">
-          <strong>Figure 5. What each MID score catches.</strong> C<sub>mat</sub> (luminance) and Cast<sub>rel</sub>
+          <strong>Figure 6. What each MID score catches.</strong> C<sub>mat</sub> (luminance) and Cast<sub>rel</sub>
           (hue) ask whether a material stays put across lights; Chroma<sub>err</sub> asks whether that colour is
           correct.
         </p>
@@ -1195,14 +1206,14 @@
         In paired per-scene tests, our model is more luminance-stable than CD-IID, both Marigold variants and
         Ordinal Shading, level with CRefNet and behind RGB&rarr;X. However, CD-IID, which predicts the shading colour
         in a separate stage, is better on all colour measures. A low drift can also come from a pale albedo, as
-        CRefNet shows in Figure 6.
+        CRefNet shows in Figure 7.
       </p>
 
       <div class="ciai-figure wide-matrix">
         <img src="static/img/ciai-qualitative.jpg"
              alt="Grid comparing input, pseudo-ground-truth albedo, and predictions from seven methods across three flash directions of the same scene. Two regions are tracked with coloured boxes across every panel: a mirror-finish calibration sphere in red, and a dark jacket in blue.">
         <p class="fig-caption">
-          <strong>Figure 6. One held-out scene, three flash directions, seven methods.</strong> The red and blue boxes
+          <strong>Figure 7. One held-out scene, three flash directions, seven methods.</strong> The red and blue boxes
           track the same two regions in every panel, so any change between rows comes from the model. The figures
           on this page show our model trained for 20k further iterations.
         </p>
@@ -1244,7 +1255,7 @@
           colour changes only slightly between frames (median chromaticity gap 0.030). As a result, our hue drift
           still grows with the light colour, nearly as much as in a grey-shading model.</li>
         <li><strong>Reflective surfaces.</strong> An albedo&ndash;shading product cannot represent a mirror, so the
-          reflection moves into the albedo as the light moves (Figure 7).</li>
+          reflection moves into the albedo as the light moves (Figure 8).</li>
         <li><strong>Hard shadows.</strong> A sharp cast shadow can still be read as a material boundary.</li>
         <li><strong>ARAP is a within-study comparison.</strong> ARAP stores its ground truth in three encodings and
           one fixed mask is applied to every model, so the ARAP numbers compare models with each other, not with
@@ -1254,7 +1265,7 @@
         <img src="static/img/ciai-limit-reflective.jpg"
              alt="A mirror sphere under four flash directions (top) and our predicted albedo for each (bottom); the reflections change between the four albedos.">
         <p class="fig-caption">
-          <strong>Figure 7. Reflective surfaces.</strong> The mirror sphere from the teaser: its reflections change
+          <strong>Figure 8. Reflective surfaces.</strong> A mirror sphere in one MID scene: its reflections change
           with the light in the input and in our albedo.
         </p>
       </div>
@@ -1274,7 +1285,7 @@
         <img src="static/img/ciai-pipeline.jpg"
              alt="Pipeline diagram. Two photographs of one rendered living room, one under an orange light and one under a green light, go through a shared model. Each pass outputs an albedo, a grey shading and a shading chroma. The two albedos are tied by L_inv, the two grey shadings by L_lum_expl, and the two chroma maps by L_chr_expl, which applies only when the pair's illuminant gap is at least 0.08.">
         <p class="fig-caption">
-          <strong>Figure 8. Future pipeline.</strong> The output panels are ground-truth targets from a rendered
+          <strong>Figure 9. Future pipeline.</strong> The output panels are ground-truth targets from a rendered
           3D-Front scene (S = I / A), not predictions. Light-grey pixels are masked, and chroma is shown at constant
           luminance.
         </p>
