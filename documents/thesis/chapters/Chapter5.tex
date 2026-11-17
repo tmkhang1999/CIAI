@@ -511,6 +511,29 @@ and CD-IID on luminance stability, and of those, only CD-IID is more accurate in
 \figref{fig:intro_constancy} in \chapref{ch:intro} shows a qualitative example: each
 column is a different flash direction for the same scene, and the variation map shows
 where the predicted luminance changes with the light.
+\figref{fig:mid_grid} puts all seven methods side by side on one held-out scene. Reading
+down each column shows how much a method's albedo changes with the flash direction, and
+comparing each column with the pseudo-ground truth shows how accurate it is. The three
+behaviours described above are visible here: CRefNet stays steady but pale, RGB$\rightarrow$X
+keeps strong colours but drops the colour of the blue jacket at light 18, and Marigold-Light
+changes the most between rows. Our albedo changes little between rows but is paler than the
+pseudo-ground truth.
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=\textwidth]{images/readme/ciai-qualitative.jpg}
+  \caption[MID albedo of all seven methods under three flash directions.]{%
+    One held-out MID scene under three flash directions (rows) for all seven methods
+    (columns), next to the input and the pseudo-ground-truth albedo. The red and blue boxes
+    mark the same two regions in every panel, a small metal sphere and the blue jacket, so
+    any change down a column comes from the model. With per-scene $C_{\text{mat}}$ from the
+    model of \tabref{tab:mid}, RGB$\rightarrow$X is about as steady in brightness as ours on
+    this scene ($0.18$ against $0.19$) but loses the jacket's colour at light 18; CRefNet
+    ($0.26$) and Marigold-Light ($0.41$) change more. One scene cannot rank the methods;
+    \tabref{tab:mid} does.
+  }
+  \label{fig:mid_grid}
+\end{figure}
 
 
 
