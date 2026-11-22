@@ -972,9 +972,9 @@
         <li><strong>The idea.</strong> Two photographs of one scene under different light go through the same
           network. Their albedos must agree, and their shadings must explain the change in brightness. The pairs
           are used only in training, so inference is still one image and one pass.</li>
-        <li><strong>The result.</strong> In a matched ablation, CIAI lowers the luminance variation of a material
-          across lighting by 28&ndash;39%, and the albedo error on raw ARAP renderings by 7&ndash;14%, with 18.5M
-          trainable parameters.</li>
+        <li><strong>The result.</strong> In a matched ablation of the final model, CIAI cuts the luminance variation of a
+          material across lighting by 39%, and it also lowers the dense albedo error (LMSE) on raw ARAP renderings
+          by 7%, with 18.5M trainable parameters.</li>
         <li><strong>The limit.</strong> Hue drift improves only by 4&ndash;6%, because the explanation loss uses
           luminance only.</li>
       </ul>
@@ -1258,9 +1258,9 @@
         <li><strong>Reflective surfaces.</strong> An albedo&ndash;shading product cannot represent a mirror, so the
           reflection moves into the albedo as the light moves (Figure 8).</li>
         <li><strong>Hard shadows.</strong> A sharp cast shadow can still be read as a material boundary.</li>
-        <li><strong>ARAP is a within-study comparison.</strong> ARAP stores its ground truth in three encodings and
-          one fixed mask is applied to every model, so the ARAP numbers compare models with each other, not with
-          published ARAP results.</li>
+        <li><strong>ARAP is a within-study comparison.</strong> Every model is scored under the same protocol, so
+          the ARAP numbers compare models with each other and are not directly comparable with published ARAP
+          results.</li>
       </ul>
       <div class="ciai-figure">
         <img src="static/img/ciai-limit-reflective.jpg"

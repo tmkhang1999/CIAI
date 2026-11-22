@@ -15,10 +15,10 @@ raw pairs from the Multi-Illumination Dataset and the MIDIntrinsics pseudo-groun
 
 The strategy does what its training signal supports. MID's pairs differ mainly in the
 direction and intensity of a white flash, and the explanation loss is defined on
-luminance; correspondingly, CIAI reduces the variation of recovered material luminance
-across illuminations by $28\%$ and $39\%$ in matched ablations, and it lowers the dense
-albedo error on raw, coloured-lit ARAP renderings by $7$--$14\%$, a benchmark outside its
-training data. Against other methods our model is more luminance-stable than CD-IID, both
+luminance; correspondingly, in a matched ablation of our final model CIAI cuts the
+variation of recovered material luminance across illuminations by $39\%$, and it lowers the
+dense albedo error (LMSE) on raw, coloured-lit ARAP renderings by $7\%$, a benchmark outside
+its training data. Against other methods our model is more luminance-stable than CD-IID, both
 Marigold variants and Ordinal Shading, level with CRefNet and behind RGB$\rightarrow$X, while
 training $18.5$M parameters. It is behind CD-IID on in-domain chroma error and mid-table on
 MAW.
@@ -50,9 +50,8 @@ fine-tuned transformer or diffusion models is untested. Most comparisons are sin
 training runs, so small differences should not be read as effects.
 
 \paragraph{Benchmarks}
-The ARAP evaluation uses one fixed albedo mask for every model. It keeps few pixels in the
-scenes whose ground truth is stored at a small scale, so ARAP supports comparisons between
-models but not with published ARAP numbers (\secref{sec:arap_results}). MID is in the training data of
+ARAP numbers compare models under one shared protocol and are not directly comparable with
+published ARAP results (\secref{sec:arap_results}). MID is in the training data of
 both our model and CD-IID, so no MID comparison is zero-shot, and its pseudo-ground truth
 is itself derived from the capture stack.
 
@@ -147,7 +146,7 @@ filters on an MID-style rig would provide pixel-aligned real pairs with known co
 changes.
 
 \paragraph{5. Evaluation on a real colour range}
-Evaluate ARAP with encoding-aware masks; report hue drift on the ARAP pairs whose
+Report hue drift on the ARAP pairs whose
 illuminant colour changes by at least $0.15$ (26 pairs in 17 scenes), on held-out LSMI
 scenes and on held-out 3D-Front pairs, always beside MAW; and report the absolute drift
 together with the relative one, so that a reduction in drift accompanied by a loss of

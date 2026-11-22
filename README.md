@@ -23,7 +23,7 @@
 - **Goal.** Predict, from one image, an albedo whose luminance stays the same when only the light changes, without losing the colour of the material.
 - **Why it is hard.** Real photographs have no albedo ground truth. Stability alone has a trivial solution: a flat grey albedo never changes, but it is wrong (Figure 3). And the only real dataset with many lights per scene and a dense albedo reference, MID, uses a white flash, so its light colour barely changes.
 - **Idea.** Two photographs of one scene under different lighting go through the same network. Their albedos must agree, and their shadings must explain the change in brightness. The pairs are used only in training, so inference is one image and one pass.
-- **Result.** In a matched ablation, CIAI lowers the luminance variation of a material across lighting by **28% and 39%**, and the albedo error on raw ARAP renderings by **7-14%**, a benchmark never used in training.
+- **Result.** In a matched ablation of the final model, CIAI cuts the luminance variation of a material across lighting by **39%**, and it also lowers the dense albedo error (LMSE) on raw ARAP renderings by **7%**, a benchmark never used in training.
 - **Limit.** Hue drift improves only by 4-6%, because the explanation loss uses luminance only.
 
 <div align="center">
@@ -100,7 +100,7 @@ All MID numbers use the 30 held-out scenes with raw input. The ablation starts f
 
 - **Colour is not learned.** The explanation loss uses luminance only, and the flash in MID is white, so the light colour changes only slightly between frames (median chromaticity gap 0.030). Hue drift therefore still grows with the light colour, nearly as much as in a grey-shading model.
 - **Reflective surfaces and hard shadows.** A mirror cannot be written as albedo times shading, so its reflections move into the albedo as the light moves (Figure 6), and a sharp cast shadow can still be read as a material edge.
-- **ARAP is a within-study comparison.** ARAP stores its ground-truth albedo in three encodings, and one fixed mask is applied to every model, so the ARAP numbers compare models with each other, not with published ARAP results.
+- **ARAP is a within-study comparison.** Every model is scored under the same protocol, so the ARAP numbers compare models with each other and are not directly comparable with published ARAP results.
 
 <div align="center">
 <img src="documents/thesis/images/readme/ciai-teaser.jpg" width="100%" alt="Top: one MID scene with a mirror sphere, lit by a flash bounced in four directions. Bottom: the albedo predicted from each photograph separately."/>

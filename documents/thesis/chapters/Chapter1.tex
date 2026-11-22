@@ -324,10 +324,10 @@ The contributions of this work are:
   parameters on top of a frozen encoder.
 
   \item \textbf{Matched evidence for what it changes} (\secref{sec:ablation}).
-  A $2 \times 2$ ablation from one shared checkpoint isolates the effect of CIAI. It lowers
-  the variation of recovered material luminance across illuminations by $28\%$ and $39\%$,
-  and it lowers the albedo error on raw ARAP renderings, a benchmark it never trained on, by
-  $7$--$14\%$. The gain in hue stability is small, and we measure why
+  A $2 \times 2$ ablation from one shared checkpoint isolates the effect of CIAI. In our final
+  model it cuts the variation of recovered material luminance across illuminations by $39\%$,
+  and it lowers the dense albedo error (LMSE) on raw ARAP renderings, a benchmark it never
+  trained on, by $7\%$. The gain in hue stability is small, and we measure why
   (\secref{sec:colour_axis}).
 
   \item \textbf{An evaluation that reports stability next to accuracy} (\secref{sec:metrics}).

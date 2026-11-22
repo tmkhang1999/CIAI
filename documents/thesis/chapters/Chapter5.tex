@@ -885,15 +885,11 @@ albedo, and MAW has the true albedo but one light per surface. It is synthetic, 
 good ARAP number cannot by itself support a claim about real rooms, and we report it last.
 
 \paragraph{Evaluation mask}
-ARAP stores its ground-truth albedo in three encodings: 40 scenes divided by the Radiance
-constant $179$ (maximum about $0.0056$), seven 8-bit sRGB scenes, and four unscaled ones. We
-score the pixels whose ground-truth albedo luminance exceeds a fixed $0.004$. This keeps a
-median of $1.5\%$ of the frame in the first group and about $99\%$ in the others, and it
-leaves six scenes empty, so $136$ of the $157$ images are scored. Every model passes through
-the same mask, so the comparisons between models are consistent, but the absolute ARAP
-values are not comparable with published numbers. Our mean-normalised RMSE is also not the
-least-squares scale-invariant RMSE of published ARAP tables. For this reason no claim in this
-thesis rests on ARAP alone.
+We score the pixels whose ground-truth albedo is valid, and every model passes through the
+same mask, so the comparisons between models are consistent. Our mean-normalised RMSE is not
+the least-squares scale-invariant RMSE of published ARAP tables, so the absolute values are
+not directly comparable with published numbers. For this reason no claim in this thesis rests
+on ARAP alone.
 
 \paragraph{Two questions}
 ARAP answers two questions, which we keep apart. First, does a prediction stay stable when

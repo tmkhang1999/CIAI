@@ -19,9 +19,10 @@ different direction, and the pseudo-ground-truth albedo that MIDIntrinsics deriv
 encoder, a DPT decoder and three-channel shading. Inference remains a single image and a
 single forward pass.
 
-In matched ablations CIAI reduces the variation of a material's recovered luminance across
-illuminations ($C_{\text{mat}}$) by $28\%$ and $39\%$, and on synthetic ARAP renderings with
-their original coloured lighting it also lowers the dense albedo error by $7$--$14\%$. Our
+In a matched ablation of our final model, CIAI cuts the variation of a material's recovered
+luminance across illuminations ($C_{\text{mat}}$) by $39\%$, and it also lowers the dense
+albedo error (LMSE) by $7\%$ on raw ARAP renderings, which keep their original coloured
+lighting. Our
 model is more luminance-stable than CD-IID, both Marigold variants and Ordinal Shading, level
 with CRefNet and behind RGB$\rightarrow$X, while training $18.5$M parameters. Every stability
 result is reported next to accuracy against measured albedo (MAW) and against the MID

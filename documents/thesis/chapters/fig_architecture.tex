@@ -40,14 +40,8 @@
     \node[thumb, right=2.5mm of Ssym] (shaT) {\includegraphics[width=15mm]{images/arch/shading.png}};
 
     % ── analytic residual: MUST sit downstream (right) of albT/shaT, since it is
-    % computed FROM A and S_d. Placing it to their left (as an earlier draft did) forces
-    % the A-> R and S_d->R arrows to run right-to-left, against the diagram's own
-    % left-to-right reading order — that was the misleading part. Anchored off albT/shaT
-    % themselves (not off dpt) so it automatically stays downstream of them.
-    % Pin R's height EXACTLY to dpt/imgT's row (the guessed yshift offset in an earlier
-    % draft was wrong). imgT, dino and dpt are chained with plain "right=" (no vertical
-    % component), so they share one y; extracting x from albT.east and y from dpt.center
-    % directly, via `let`, removes any guesswork about node-anchor offsets.
+    % computed FROM A and S_d, so the A->R and S_d->R arrows read left to right.
+    % R shares the row of imgT/dino/dpt: x from albT.east, y from dpt.center via `let`.
     \path let \p1 = ([xshift=20mm]albT.east), \p2 = (dpt.center) in
       node[resid] (R) at (\x1,\y2)
       {$\mathbf{R}{=}(\mathbf{I}{-}\mathbf{A}{\odot}\mathbf{S}_d)_{+}$\\[1pt]{\scriptsize analytic; \emph{no head}}};
